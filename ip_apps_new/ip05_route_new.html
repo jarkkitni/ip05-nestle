@@ -155,7 +155,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 .qa-btn:active{transform:scale(.96)}
 .qa-btn .qb-icon{font-size:28px}
 .qa-btn.maps{background:#eff6ff;color:#1d4ed8}
-.qa-btn.sv{background:#f0f4ff;color:#4338ca}
+.qa-btn.call{background:#f0fdf4;color:#15803d}
+.sb-order{background:#fff7ed;color:#ea580c}
 .qa-btn.waze{background:#fff8e6;color:#b45309;grid-column:1/-1}
 .qa-detail-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;padding-top:10px;border-top:1px solid #f0f0f0}
 .qa-small-btn{border:1.5px solid #e5e7eb;background:#fff;border-radius:12px;padding:11px 8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;color:#374151}
@@ -1821,7 +1822,7 @@ function openQuick(code) {
     + '</div></div>'
     + '<div class="qa-nav-row">'
     + '<button class="qa-btn maps" id="qaMaps"><div class="qb-icon">🗺️</div>Google Maps<div style="font-size:10px;font-weight:500;opacity:.75">นำทาง</div></button>'
-    + '<button class="qa-btn sv" id="qaSv"><div class="qb-icon">🌆</div>Street View<div style="font-size:10px;font-weight:500;opacity:.75">ดูหน้าร้าน</div></button>'
+    + (s.tel ? '<button class="qa-btn call" id="qaCall"><div class="qb-icon">📞</div>โทรหาร้าน<div style="font-size:10px;font-weight:500;opacity:.75">'+s.tel+'</div></button>' : '<button class="qa-btn call" id="qaCall"><div class="qb-icon">📞</div>โทรหาร้าน<div style="font-size:10px;font-weight:500;opacity:.75">ไม่มีเบอร์</div></button>')
     + '</div>'
     + '<button class="qa-btn waze" id="qaWaze"><div class="qb-icon">🚗</div>Waze<div style="font-size:10px;font-weight:500;opacity:.75">นำทางด้วย Waze</div></button>'
     + '<div style="font-size:12px;font-weight:700;color:#6b7280;margin:12px 0 6px">บันทึกสถานะการเยี่ยม:</div>'
@@ -1830,6 +1831,7 @@ function openQuick(code) {
     + '<button class="status-btn sb-c" id="qaSbC"><div class="si">❌</div>ปิดร้าน</button>'
     + '<button class="status-btn sb-nf" id="qaSbNF"><div class="si">⚠️</div>ไม่พบเจ้าของ</button>'
     + '<button class="status-btn sb-rs" id="qaSbRS"><div class="si">📅</div>นัดใหม่</button>'
+    + '<button class="status-btn sb-order" id="qaSbOrder" style="grid-column:1/-1"><div class="si">🛒</div>สั่งซื้อสินค้า'+(Object.keys(getOrder(code)).length>0?' ✅':'')+'</button>'
     + '</div>'
     + '<div class="status-note-wrap" id="qaNoteWrap" style="display:none">'
     + '<input class="status-note-inp" id="qaNoteInp" placeholder="หมายเหตุ (ไม่บังคับ)...">'
@@ -1849,8 +1851,9 @@ function openQuick(code) {
   }
   document.getElementById('qaClose').onclick = function(){ closeModal('quickModal'); };
   document.getElementById('qaMaps').onclick = function(){ navGoogle(lat,lng); };
-  document.getElementById('qaSv').onclick = function(){ openStreetView(lat,lng); };
+  document.getElementById('qaCall').onclick = function(){ if(s.tel) window.location='tel:'+s.tel; else navGoogle(lat,lng); };
   document.getElementById('qaWaze').onclick = function(){ navWaze(lat,lng); };
+  document.getElementById('qaSbOrder').onclick = function(){ closeModal('quickModal'); openOrder(code); };
   document.getElementById('qaSbV').onclick = function(){ showNoteForStatus('v'); };
   document.getElementById('qaSbC').onclick = function(){ showNoteForStatus('c'); };
   document.getElementById('qaSbNF').onclick = function(){ showNoteForStatus('nf'); };
@@ -1911,7 +1914,6 @@ function openDetail(code) {
     + (s.tel?'<button class="action-btn btn-call" id="detCallBtn"><span class="icon">📞</span>'+s.tel+'</button>':'')
     + '<button class="action-btn btn-checkin '+(vis?'done':'')+'" id="checkinBtn_'+code+'"><span class="icon">'+(vis?'✅':'📲')+'</span>'+(vis?'เช็คอินแล้ว':'เช็คอิน')
     + (!vis&&!in150&&dist!==null?'<br><small style="font-size:9px;opacity:.8">ต้องอยู่ใกล้ &lt;150ม.</small>':'')+'</button>'
-    + '<button class="action-btn btn-order" id="detOrderBtn"><span class="icon">🛒</span>สั่งซื้อ'+(Object.keys(getOrder(code)).length>0?'<br><small style="font-size:9px;color:#ea580c">มีออเดอร์✅</small>':'')+'</button>'
     + '<button class="action-btn btn-locfix" id="detLocFixBtn"><span class="icon">✏️</span>แก้ตำแหน่ง</button>'
     + '</div>'
     + '<div class="notes-label">📝 หมายเหตุ</div>'
@@ -1925,7 +1927,6 @@ function openDetail(code) {
   db.querySelector('#detSvBtn').onclick = function(){ openStreetView(_lat,_lng); };
   if (s.tel && db.querySelector('#detCallBtn')) db.querySelector('#detCallBtn').onclick = function(){ window.location='tel:'+s.tel; };
   db.querySelector('#checkinBtn_'+code).onclick = function(){ checkIn(code); };
-  db.querySelector('#detOrderBtn').onclick = function(){ closeModal('detailModal'); openOrder(code); };
   db.querySelector('#detLocFixBtn').onclick = function(){ openLocFix(code); };
   db.querySelector('#detSaveNoteBtn').onclick = function(){ doSaveNote(code); };
   document.getElementById('detailModal').classList.add('open');
