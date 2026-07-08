@@ -93,6 +93,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 .btn-checkin.done{background:var(--ok)}
 .btn-sv{background:#f0f4ff;color:#4338ca}
 .btn-locfix{background:#fff0f0;color:#dc2626;border:1px solid #fecaca;font-size:12px}
+.btn-order{background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;font-size:12px}
+.order-row{display:flex;align-items:center;gap:8px;margin-bottom:11px;padding-bottom:11px;border-bottom:1px solid #f3f4f6}
+.order-item-name{flex:1;font-size:13px;font-weight:600;color:#1a1a2e}
+.order-unit{font-size:10px;color:#888;margin-top:2px;font-weight:400}
+.order-qty-ctrl{display:flex;align-items:center;gap:4px}
+.order-qty-btn{width:30px;height:30px;border:1.5px solid #fed7aa;background:#fff7ed;color:#ea580c;border-radius:6px;font-size:18px;font-weight:700;cursor:pointer;line-height:1;padding:0}
+.order-qty-inp{width:44px;height:30px;text-align:center;border:1.5px solid #e5e7eb;border-radius:6px;font-size:14px;font-weight:700;-moz-appearance:textfield}
+.order-qty-inp::-webkit-outer-spin-button,.order-qty-inp::-webkit-inner-spin-button{-webkit-appearance:none}
+.order-save-btn{width:100%;background:#ea580c;color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;margin-top:14px}
+.order-clear-btn{width:100%;background:#f5f5f5;color:#888;border:none;border-radius:10px;padding:10px;font-size:12px;cursor:pointer;margin-top:6px}
 /* LOC FIX MODAL */
 .loc-fix-opt{display:flex;align-items:center;gap:12px;padding:13px 14px;background:#f8f9fa;border-radius:12px;margin-bottom:10px;cursor:pointer;border:1.5px solid #e5e7eb;transition:background .15s}
 .loc-fix-opt:active{background:#e5e7eb}
@@ -368,7 +378,7 @@ const DAY_COLORS = {'จันทร์':'#1a73e8','อังคาร':'#ea4335
 const MY_MAPS_MID = '1NeB3YO91cClHi3j1Ou_zZN1AJJm4DYs';
 const MY_MAPS_URL = 'https://www.google.com/maps/d/u/0/viewer?mid='+MY_MAPS_MID;
 // รหัสร้านที่แก้พิกัดผ่าน script (บันทึกเพื่อแสดงสัญลักษณ์ ⭐)
-const SCRIPT_FIXED_CODES = new Set(['849000584','849000356','849000290','849000564']);
+const SCRIPT_FIXED_CODES = new Set(['849000584','849000356','849000290','849000564','849000423','849000431']);
 const STORES = [
   {
     "name": "POP มินิมาร์ท",
@@ -485,8 +495,8 @@ const STORES = [
     "addr": "298 หมู่ 2 ต.เชิงดอย อ.ดอยสะเก็ด จ.เชียงใหม่ ต.เชิงดอย อ.ดอยสะเก็ด จ.เชียงใหม่ 5",
     "code": "849000431",
     "tel": "098-750-7712",
-    "lat": 18.7774434116267,
-    "lng": 99.0208132236815,
+    "lat": 18.9089088,
+    "lng": 99.1564713,
     "day": "จันทร์",
     "cat": "ไอศกรีม-TT-ร้านของชำ",
     "area": "ต.เชิงดอย อ.ดอยสะเก็ด จ.เชียงใหม่"
@@ -573,8 +583,8 @@ const STORES = [
     "addr": "16 ต.สันนาเม็ง อ.สันทราย จ.เชียงใหม่ ต.สันนาเม็ง อ.สันทราย จ.เชียงใหม่ 50210",
     "code": "849000423",
     "tel": "086-1849710",
-    "lat": 18.7774658781193,
-    "lng": 99.02082763905,
+    "lat": 18.842054,
+    "lng": 99.059798,
     "day": "อังคาร",
     "cat": "ไอศกรีม-TT-ร้านของชำ",
     "area": "ต.สันนาเม็ง อ.สันทราย จ.เชียงใหม่"
@@ -1901,6 +1911,7 @@ function openDetail(code) {
     + (s.tel?'<button class="action-btn btn-call" id="detCallBtn"><span class="icon">📞</span>'+s.tel+'</button>':'')
     + '<button class="action-btn btn-checkin '+(vis?'done':'')+'" id="checkinBtn_'+code+'"><span class="icon">'+(vis?'✅':'📲')+'</span>'+(vis?'เช็คอินแล้ว':'เช็คอิน')
     + (!vis&&!in150&&dist!==null?'<br><small style="font-size:9px;opacity:.8">ต้องอยู่ใกล้ &lt;150ม.</small>':'')+'</button>'
+    + '<button class="action-btn btn-order" id="detOrderBtn"><span class="icon">🛒</span>สั่งซื้อ'+(Object.keys(getOrder(code)).length>0?'<br><small style="font-size:9px;color:#ea580c">มีออเดอร์✅</small>':'')+'</button>'
     + '<button class="action-btn btn-locfix" id="detLocFixBtn"><span class="icon">✏️</span>แก้ตำแหน่ง</button>'
     + '</div>'
     + '<div class="notes-label">📝 หมายเหตุ</div>'
@@ -1914,6 +1925,7 @@ function openDetail(code) {
   db.querySelector('#detSvBtn').onclick = function(){ openStreetView(_lat,_lng); };
   if (s.tel && db.querySelector('#detCallBtn')) db.querySelector('#detCallBtn').onclick = function(){ window.location='tel:'+s.tel; };
   db.querySelector('#checkinBtn_'+code).onclick = function(){ checkIn(code); };
+  db.querySelector('#detOrderBtn').onclick = function(){ closeModal('detailModal'); openOrder(code); };
   db.querySelector('#detLocFixBtn').onclick = function(){ openLocFix(code); };
   db.querySelector('#detSaveNoteBtn').onclick = function(){ doSaveNote(code); };
   document.getElementById('detailModal').classList.add('open');
@@ -2267,6 +2279,85 @@ function openContacts() {
 function openQR() { document.getElementById('qrModal').classList.add('open'); }
 
 // ── REPORT ───────────────────────────────────────────────
+// ── Order System ─────────────────────────────────────────
+var NESTLE_PRODUCTS = [
+  { id:'milo_uht180', name:'MILO UHT 180ml', unit:'ลัง (24ขวด)' },
+  { id:'milo_uht1l', name:'MILO UHT 1L', unit:'ลัง (12กล่อง)' },
+  { id:'milo_pow400', name:'MILO ผง 400g', unit:'กป.' },
+  { id:'bear_brand', name:'นมตราหมี 140ml', unit:'ลัง (48ขวด)' },
+  { id:'nescafe_3in1', name:'เนสกาแฟ 3in1', unit:'ลัง (12แพ็ค)' },
+  { id:'kitkat_4f', name:'KitKat 4F 35g', unit:'กล่อง (36ชิ้น)' },
+  { id:'kitkat_mini', name:'KitKat Mini Bag', unit:'กล่อง' },
+  { id:'smarties', name:'Smarties', unit:'กล่อง' },
+  { id:'crunch', name:'Crunch Bar', unit:'กล่อง' },
+  { id:'maggi_cube', name:'Maggi ก้อนซุป', unit:'โหล' }
+];
+
+function getOrder(code) {
+  try { return JSON.parse(localStorage.getItem('order_'+code)||'{}'); } catch(e){ return {}; }
+}
+function saveOrder(code, obj) { localStorage.setItem('order_'+code, JSON.stringify(obj)); }
+
+function getAllOrders() {
+  var result = [];
+  STORES.forEach(function(s){
+    var ord = getOrder(s.code);
+    var items = [];
+    NESTLE_PRODUCTS.forEach(function(p){
+      if (ord[p.id] && ord[p.id]>0) items.push({name:p.name, unit:p.unit, qty:ord[p.id]});
+    });
+    if (items.length>0) result.push({store:s, items:items});
+  });
+  return result;
+}
+
+function openOrder(code) {
+  var s = STORES.find(function(x){ return x.code===code; });
+  if (!s) return;
+  var ord = getOrder(code);
+  var body = document.getElementById('orderBody');
+  var h = '<div style="font-size:13px;font-weight:800;color:#1a1a2e;margin-bottom:12px">📦 '+s.name+'</div>';
+  h += '<div style="font-size:11px;color:#666;margin-bottom:14px">ใส่จำนวนที่ต้องการสั่ง (0 = ไม่สั่ง)</div>';
+  NESTLE_PRODUCTS.forEach(function(p){
+    var qty = ord[p.id]||0;
+    h += '<div class="order-row">';
+    h += '<div class="order-item-name"><div>'+p.name+'</div><div class="order-unit">'+p.unit+'</div></div>';
+    h += '<div class="order-qty-ctrl">';
+    h += '<button class="order-qty-btn" onclick="adjQty(\''+p.id+'\',-1)">－</button>';
+    h += '<input class="order-qty-inp" id="qty_'+p.id+'" type="number" min="0" value="'+qty+'">';
+    h += '<button class="order-qty-btn" onclick="adjQty(\''+p.id+'\',1)">＋</button>';
+    h += '</div></div>';
+  });
+  h += '<button class="order-save-btn" id="orderSaveBtn">💾 บันทึกออเดอร์</button>';
+  h += '<button class="order-clear-btn" id="orderClearBtn">🗑 ล้างออเดอร์</button>';
+  body.innerHTML = h;
+  document.getElementById('orderSaveBtn').onclick = function(){ doSaveOrder(code); };
+  document.getElementById('orderClearBtn').onclick = function(){ doSaveOrder(code, true); };
+  document.getElementById('orderModal').classList.add('open');
+}
+
+function adjQty(pid, delta) {
+  var inp = document.getElementById('qty_'+pid);
+  if (!inp) return;
+  inp.value = Math.max(0, (parseInt(inp.value)||0) + delta);
+}
+
+function doSaveOrder(code, clear) {
+  if (clear) { saveOrder(code, {}); toast('🗑 ล้างออเดอร์แล้ว'); }
+  else {
+    var ord = {};
+    NESTLE_PRODUCTS.forEach(function(p){
+      var inp = document.getElementById('qty_'+p.id);
+      if (inp){ var v=parseInt(inp.value)||0; if(v>0) ord[p.id]=v; }
+    });
+    saveOrder(code, ord);
+    var total = Object.keys(ord).length;
+    toast(total>0 ? '💾 บันทึก '+total+' รายการ' : '🗑 ล้างออเดอร์แล้ว');
+  }
+  closeModal('orderModal');
+  openDetail(code);
+}
+
 function openReport() {
   const day = todayDay();
   const now = new Date();
@@ -2303,6 +2394,18 @@ function openReport() {
   addDetail(cats.c,'❌ ปิดร้าน:');
   addDetail(cats.nf,'⚠️ ไม่พบเจ้าของ:');
   addDetail(cats.rs,'📅 นัดใหม่:');
+  // order summary
+  var orders = getAllOrders();
+  if (orders.length > 0) {
+    txt += '\n'+'─'.repeat(17)+'\n';
+    txt += '🛒 สรุปออเดอร์ ('+orders.length+' ร้าน)\n';
+    orders.forEach(function(ord){
+      txt += '\n📦 '+ord.store.name+' ('+ord.store.code+')\n';
+      ord.items.forEach(function(item){
+        txt += '  • '+item.name+' × '+item.qty+' '+item.unit+'\n';
+      });
+    });
+  }
   document.getElementById('reportText').textContent = txt;
   window._reportTxt = txt;
   document.getElementById('reportModal').classList.add('open');
@@ -2345,7 +2448,53 @@ document.addEventListener('DOMContentLoaded',()=>{
   if (todayCount===0) switchTab('all');
   else switchTab('today');
   updateProgress();
+
+  // Welcome modal — แสดงครั้งแรกเท่านั้น
+  if (!localStorage.getItem('myMapsOpened')) {
+    document.getElementById('welcomeModal').style.display = 'flex';
+  }
 });
+
+function openMyMapsAndDismiss() {
+  window.open('https://www.google.com/maps/d/u/0/viewer?mid=1NeB3YO91cClHi3j1Ou_zZN1AJJm4DYs&ll=9.585997654097723%2C49.651133999999985&z=4', '_blank');
+  localStorage.setItem('myMapsOpened', '1');
+  document.getElementById('welcomeModal').style.display = 'none';
+}
+
+function skipWelcome() {
+  localStorage.setItem('myMapsOpened', '1');
+  document.getElementById('welcomeModal').style.display = 'none';
+}
 </script>
+
+<!-- Order Modal -->
+<div class="modal" id="orderModal">
+  <div class="sheet">
+    <div class="sheet-header">
+      <div class="sheet-title">🛒 สั่งซื้อสินค้า</div>
+      <button class="sheet-close" onclick="closeModal('orderModal')">✕</button>
+    </div>
+    <div class="sheet-body" id="orderBody"></div>
+  </div>
+</div>
+
+<!-- Welcome Modal -->
+<div id="welcomeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px 24px;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+    <div style="font-size:2.2rem;margin-bottom:8px;">🗺️</div>
+    <div style="font-size:1.1rem;font-weight:700;color:#1a3c5e;margin-bottom:8px;">ก่อนใช้งานแอป</div>
+    <div style="font-size:0.9rem;color:#444;line-height:1.6;margin-bottom:20px;">
+      กรุณากด <strong>"เปิด Google My Maps"</strong> ก่อน 1 ครั้ง<br>
+      เพื่อให้แผนที่สีๆ แสดงผลได้ถูกต้อง
+    </div>
+    <button onclick="openMyMapsAndDismiss()" style="width:100%;padding:14px;background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:10px;">
+      🗺️ เปิด Google My Maps
+    </button>
+    <button onclick="skipWelcome()" style="width:100%;padding:10px;background:#f0f0f0;color:#666;border:none;border-radius:8px;font-size:0.85rem;cursor:pointer;">
+      เคยเปิดแล้ว / ข้ามไปก่อน
+    </button>
+  </div>
+</div>
+
 </body>
 </html>
