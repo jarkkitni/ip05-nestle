@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IP05 รายงานเปรียบเทียบ — Nestlé เชียงใหม่</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700;800&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --blue:#1F4E79;--blue2:#2E75B6;--green:#375623;--green2:#70AD47;
+    --red:#C00000;--orange:#ED7D31;--gold:#FFC000;--light:#F5F9FF;
+    --border:#D9E2F3;--text:#1a1a2e;--white:#fff;
+  }
+  body{font-family:'Sarabun',sans-serif;background:#0f1729;color:var(--white);min-height:100vh;overflow-x:hidden}
+
+  /* TOP HEADER */
+  .hero{
+    background:linear-gradient(135deg,#0D2137 0%,#1F4E79 50%,#0D3B66 100%);
+    padding:32px 40px 24px;border-bottom:3px solid var(--blue2);
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;
+  }
+  .hero-left h1{font-size:2rem;font-weight:800;letter-spacing:.5px;line-height:1.2}
+  .hero-left h1 span{color:var(--gold)}
+  .hero-left p{color:#9BB8D4;font-size:.95rem;margin-top:6px}
+  .hero-right{text-align:right;color:#9BB8D4;font-size:.88rem;line-height:1.8}
+  .badge{display:inline-block;background:var(--blue2);color:#fff;padding:4px 12px;
+         border-radius:20px;font-size:.8rem;font-weight:600;margin-left:8px}
+
+  /* ACTION BUTTONS */
+  .action-bar{
+    background:linear-gradient(135deg,#0a1a2e 0%,#0f2540 100%);
+    padding:16px 40px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;
+    border-bottom:2px solid rgba(255,255,255,.06);
+  }
+  .action-bar .bar-label{color:#6A8FAE;font-size:.82rem;font-weight:600;
+    margin-right:4px;white-space:nowrap}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;padding:10px 22px;
+    border-radius:8px;font-family:'Sarabun',sans-serif;font-size:.92rem;
+    font-weight:700;cursor:pointer;border:none;text-decoration:none;
+    transition:transform .15s,box-shadow .15s;white-space:nowrap;
+  }
+  .btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.4)}
+  .btn:active{transform:translateY(0)}
+  .btn-new{background:linear-gradient(135deg,#1a7F37,#2ECC71);color:#fff}
+  .btn-old{background:linear-gradient(135deg,#2C3E50,#4A6FA5);color:#C8DCF0;
+    border:1px solid rgba(255,255,255,.15)}
+  .btn-xl{background:linear-gradient(135deg,#1D6F42,#107C41);color:#fff}
+  .btn-divider{width:1px;height:32px;background:rgba(255,255,255,.1);margin:0 4px}
+
+  /* KPI CARDS */
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:28px 40px 0}
+  .kpi{background:linear-gradient(145deg,#1a2f50,#16253f);border-radius:12px;
+       padding:20px 24px;border:1px solid rgba(255,255,255,.08);position:relative;overflow:hidden}
+  .kpi::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:12px 0 0 12px}
+  .kpi.blue::before{background:var(--blue2)}
+  .kpi.green::before{background:var(--green2)}
+  .kpi.red::before{background:var(--red)}
+  .kpi.orange::before{background:var(--orange)}
+  .kpi-icon{font-size:2rem;margin-bottom:8px}
+  .kpi-num{font-size:2.8rem;font-weight:800;line-height:1}
+  .kpi.blue .kpi-num{color:#5BA3E0}
+  .kpi.green .kpi-num{color:var(--green2)}
+  .kpi.red .kpi-num{color:#FF5252}
+  .kpi.orange .kpi-num{color:var(--orange)}
+  .kpi-label{font-size:.9rem;color:#9BB8D4;margin-top:6px;font-weight:600}
+  .kpi-sub{font-size:.78rem;color:#6A8FAE;margin-top:4px}
+
+  /* SECTIONS */
+  .section{padding:28px 40px}
+  .section-title{font-size:1.2rem;font-weight:700;color:var(--gold);
+    display:flex;align-items:center;gap:10px;margin-bottom:20px;
+    border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:12px}
+
+  /* CHART GRID */
+  .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .chart-box{background:#1a2f50;border-radius:12px;padding:20px;
+    border:1px solid rgba(255,255,255,.08)}
+  .chart-box h3{font-size:1rem;color:#C8DCF0;font-weight:600;margin-bottom:16px;text-align:center}
+  .chart-wrap{position:relative;height:260px}
+
+  /* TABLE CARDS */
+  .tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .tab{padding:8px 20px;border-radius:8px;cursor:pointer;font-size:.9rem;font-weight:600;
+    border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);
+    color:#9BB8D4;transition:.2s}
+  .tab.active{background:var(--blue2);color:#fff;border-color:var(--blue2)}
+  .tab:hover:not(.active){background:rgba(255,255,255,.1)}
+
+  .table-panel{display:none}
+  .table-panel.active{display:block}
+
+  .data-table{width:100%;border-collapse:collapse;font-size:.85rem}
+  .data-table th{background:var(--blue);color:#fff;padding:10px 12px;
+    text-align:left;white-space:nowrap;font-weight:600}
+  .data-table td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.05);
+    white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
+  .data-table tr:hover td{background:rgba(255,255,255,.04)}
+  .data-table .row-miss{background:rgba(192,0,0,.12)}
+  .data-table .row-miss:hover td{background:rgba(192,0,0,.2)}
+  .data-table .row-extra{background:rgba(237,125,49,.08)}
+  .data-table .row-extra:hover td{background:rgba(237,125,49,.16)}
+  .data-table .row-ok{background:rgba(112,173,71,.08)}
+  .data-table .row-ok:hover td{background:rgba(112,173,71,.15)}
+  .tag{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.75rem;font-weight:700}
+  .tag-miss{background:rgba(192,0,0,.3);color:#FF8A80;border:1px solid rgba(192,0,0,.5)}
+  .tag-extra{background:rgba(237,125,49,.3);color:#FFAB76;border:1px solid rgba(237,125,49,.5)}
+  .tag-ok{background:rgba(112,173,71,.25);color:#A5D6A7;border:1px solid rgba(112,173,71,.5)}
+
+  /* DAY BREAKDOWN TABLE */
+  .day-tbl{width:100%;border-collapse:collapse;font-size:.95rem}
+  .day-tbl th{background:var(--blue);color:#fff;padding:12px 16px;text-align:center;font-weight:600}
+  .day-tbl td{padding:12px 16px;text-align:center;border-bottom:1px solid rgba(255,255,255,.06)}
+  .day-tbl .diff-pos{color:var(--orange);font-weight:700}
+  .day-tbl .diff-zero{color:var(--green2);font-weight:700}
+  .day-tbl .diff-neg{color:#FF5252;font-weight:700}
+  .day-name{font-weight:700;color:#C8DCF0}
+
+  /* PROGRESS BAR */
+  .progress-wrap{margin-top:24px}
+  .prog-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;font-size:.9rem}
+  .prog-label{width:70px;color:#9BB8D4;font-weight:600;text-align:right}
+  .prog-bar{flex:1;background:rgba(255,255,255,.08);border-radius:20px;height:22px;overflow:hidden}
+  .prog-fill{height:100%;border-radius:20px;display:flex;align-items:center;
+    padding-left:10px;font-size:.78rem;font-weight:700;transition:width .8s ease;white-space:nowrap}
+  .prog-xl{background:linear-gradient(90deg,#2E75B6,#5BA3E0)}
+  .prog-app{background:linear-gradient(90deg,#375623,#70AD47)}
+  .prog-count{font-size:.85rem;color:#9BB8D4;width:60px;text-align:right}
+
+  /* SUMMARY BOX */
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+  .summ-box{background:#1a2f50;border-radius:10px;padding:16px 20px;
+    border:1px solid rgba(255,255,255,.08)}
+  .summ-box h4{font-size:.95rem;font-weight:700;margin-bottom:10px;
+    display:flex;align-items:center;gap:8px}
+  .summ-box ul{list-style:none;font-size:.85rem;color:#9BB8D4;line-height:2}
+  .summ-box ul li::before{content:'›  ';color:var(--gold)}
+
+  /* FOOTER */
+  footer{text-align:center;padding:20px 40px;color:#4A6A8A;font-size:.82rem;
+    border-top:1px solid rgba(255,255,255,.05);margin-top:8px}
+
+  /* SCROLL */
+  .table-scroll{max-height:400px;overflow-y:auto;border-radius:8px;
+    border:1px solid rgba(255,255,255,.08)}
+  .table-scroll::-webkit-scrollbar{width:6px}
+  .table-scroll::-webkit-scrollbar-track{background:#0f1729}
+  .table-scroll::-webkit-scrollbar-thumb{background:#2E75B6;border-radius:3px}
+
+  @media(max-width:900px){
+    .kpi-row,.chart-grid,.summary-grid{grid-template-columns:1fr 1fr}
+    .hero,.section{padding:20px}
+    .kpi-row{padding:20px}
+  }
+  @media(max-width:600px){
+    .kpi-row{grid-template-columns:1fr 1fr}
+    .chart-grid,.summary-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-left">
+    <h1>📊 รายงานข้อมูลร้านค้า <span>IP05</span> เชียงใหม่</h1>
+    <p>เปรียบเทียบ Excel ต้นฉบับ vs แอปปัจจุบัน — เตรียมเสนอทีมบริหาร</p>
+  </div>
+  <div class="hero-right">
+    <div>🗓️ วันที่วิเคราะห์: 8 กรกฎาคม 2568</div>
+    <div>🏢 บริษัท: Nestlé Thailand</div>
+    <div>📍 สาย: <span class="badge">849IP05 เชียงใหม่</span></div>
+  </div>
+</div>
+
+<!-- ACTION BAR -->
+<div class="action-bar">
+  <span class="bar-label">🚀 เปิดแอป:</span>
+  <a class="btn btn-new" href="./ip_apps_new/ip05_route_new.html" target="_blank">
+    📱 แอปใหม่ (อัปเดตแล้ว 105 ร้าน)
+  </a>
+  <a class="btn btn-old" href="./ip_apps_new/ip05_route_v1_เดิม145.html" target="_blank">
+    📂 แอปเก่า (เดิม 145 ร้าน)
+  </a>
+  <div class="btn-divider"></div>
+  <span class="bar-label">📊 ข้อมูล:</span>
+  <a class="btn btn-xl" href="IP05_รายงานเปรียบเทียบ.xlsx" download>
+    📥 ดาวน์โหลด Excel รายงาน
+  </a>
+</div>
+
+<!-- KPI CARDS -->
+<div class="kpi-row">
+  <div class="kpi blue">
+    <div class="kpi-icon">📄</div>
+    <div class="kpi-num">105</div>
+    <div class="kpi-label">Excel ต้นฉบับ</div>
+    <div class="kpi-sub">ร้านค้าที่ควรมีในระบบ</div>
+  </div>
+  <div class="kpi green">
+    <div class="kpi-icon">📱</div>
+    <div class="kpi-num">145</div>
+    <div class="kpi-label">แอปปัจจุบัน</div>
+    <div class="kpi-sub">ร้านค้าที่มีในแอปขณะนี้</div>
+  </div>
+  <div class="kpi red">
+    <div class="kpi-icon">❌</div>
+    <div class="kpi-num">14</div>
+    <div class="kpi-label">ขาดในแอป</div>
+    <div class="kpi-sub">ต้องเพิ่มเข้าแอปด่วน</div>
+  </div>
+  <div class="kpi orange">
+    <div class="kpi-icon">⚠️</div>
+    <div class="kpi-num">40</div>
+    <div class="kpi-label">เกินในแอป</div>
+    <div class="kpi-sub">ต้องตรวจสอบ / ลบออก</div>
+  </div>
+</div>
+
+<!-- CHARTS -->
+<div class="section">
+  <div class="section-title">📈 กราฟเปรียบเทียบ</div>
+  <div class="chart-grid">
+
+    <div class="chart-box">
+      <h3>จำนวนร้านค้าต่อวัน: Excel vs แอป</h3>
+      <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+    </div>
+
+    <div class="chart-box">
+      <h3>สัดส่วนร้านค้าใน Excel ต้นฉบับ (แยกตามวัน)</h3>
+      <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+    </div>
+
+  </div>
+
+  <!-- Progress bars -->
+  <div class="progress-wrap" style="margin-top:24px">
+    <div style="font-size:.95rem;color:#C8DCF0;font-weight:600;margin-bottom:14px">📊 จำนวนร้านต่อวัน (แถบเปรียบเทียบ)</div>
+    <div style="display:flex;gap:16px;margin-bottom:12px;font-size:.82rem">
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;background:linear-gradient(90deg,#2E75B6,#5BA3E0);border-radius:3px;display:inline-block"></span>Excel</span>
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;background:linear-gradient(90deg,#375623,#70AD47);border-radius:3px;display:inline-block"></span>แอป</span>
+    </div>
+    <div id="progressBars"></div>
+  </div>
+</div>
+
+<!-- DAY TABLE -->
+<div class="section" style="padding-top:0">
+  <div class="section-title">📅 ตารางเปรียบเทียบรายวัน</div>
+  <div style="overflow-x:auto;border-radius:10px;border:1px solid rgba(255,255,255,.08)">
+    <table class="day-tbl">
+      <thead>
+        <tr>
+          <th>วัน</th>
+          <th>📄 Excel</th>
+          <th>📱 แอป</th>
+          <th>ผลต่าง</th>
+          <th>สถานะ</th>
+        </tr>
+      </thead>
+      <tbody id="dayTbody"></tbody>
+      <tfoot>
+        <tr style="background:rgba(31,78,121,.5);font-weight:800">
+          <td style="padding:12px 16px;color:var(--gold)">รวมทั้งหมด</td>
+          <td style="padding:12px 16px;text-align:center;color:#5BA3E0;font-size:1.1rem">105</td>
+          <td style="padding:12px 16px;text-align:center;color:var(--green2);font-size:1.1rem">145</td>
+          <td style="padding:12px 16px;text-align:center;color:var(--orange);font-size:1.1rem">+40</td>
+          <td style="padding:12px 16px;text-align:center;color:var(--orange)">⚠️ เกินมา 40 ร้าน</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- DATA TABLES -->
+<div class="section" style="padding-top:0">
+  <div class="section-title">🗂️ รายละเอียดร้านค้า</div>
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('miss')">❌ ขาดในแอป (14 ร้าน)</button>
+    <button class="tab" onclick="showTab('extra')">⚠️ เกินในแอป (40 ร้าน)</button>
+    <button class="tab" onclick="showTab('mon')">✅ วันจันทร์ (ตรง 100%)</button>
+    <button class="tab" onclick="showTab('roadmap')" style="background:linear-gradient(135deg,rgba(255,192,0,.15),rgba(255,192,0,.05));border-color:rgba(255,192,0,.4);color:#FFC000">🗺️ Roadmap งานที่แก้แล้ว</button>
+  </div>
+
+  <!-- Missing -->
+  <div class="table-panel active" id="tab-miss">
+    <div style="background:rgba(192,0,0,.15);border:1px solid rgba(192,0,0,.3);border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:.88rem;color:#FF8A80">
+      ⚠️ ร้านค้าเหล่านี้อยู่ใน <strong>Excel ต้นฉบับ</strong> แต่ยังไม่มีในแอป — ต้องเพิ่มเข้าระบบ
+    </div>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>#</th><th>รหัส</th><th>ชื่อร้านค้า</th><th>วัน</th><th>ประเภท</th><th>พิกัด</th></tr></thead>
+        <tbody id="tbl-miss"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Extra -->
+  <div class="table-panel" id="tab-extra">
+    <div style="background:rgba(237,125,49,.12);border:1px solid rgba(237,125,49,.3);border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:.88rem;color:#FFAB76">
+      🔍 ร้านค้าเหล่านี้มีในแอปแต่ <strong>ไม่อยู่ใน Excel</strong> — โปรดตรวจสอบว่าควรคงไว้หรือลบออก
+    </div>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>#</th><th>รหัส</th><th>ชื่อร้านค้า</th><th>วัน</th><th>ประเภท</th></tr></thead>
+        <tbody id="tbl-extra"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ROADMAP -->
+  <div class="table-panel" id="tab-roadmap">
+    <style>
+      .rm-phase{margin-bottom:28px}
+      .rm-phase-title{font-size:1rem;font-weight:700;color:var(--gold);
+        display:flex;align-items:center;gap:10px;margin-bottom:14px;
+        padding:10px 16px;background:rgba(255,192,0,.08);border-left:3px solid var(--gold);border-radius:0 8px 8px 0}
+      .timeline{position:relative;padding-left:28px}
+      .timeline::before{content:'';position:absolute;left:8px;top:0;bottom:0;
+        width:2px;background:linear-gradient(to bottom,rgba(255,255,255,.2),transparent)}
+      .tl-item{position:relative;margin-bottom:12px;display:flex;gap:14px;align-items:flex-start}
+      .tl-dot{width:18px;height:18px;border-radius:50%;flex-shrink:0;margin-top:2px;
+        display:flex;align-items:center;justify-content:center;font-size:.7rem;
+        position:absolute;left:-22px}
+      .tl-dot.done{background:#2ECC71;box-shadow:0 0 8px rgba(46,204,113,.5)}
+      .tl-dot.fix{background:#FFC000;box-shadow:0 0 8px rgba(255,192,0,.5)}
+      .tl-dot.ok{background:#2E75B6;box-shadow:0 0 8px rgba(46,117,182,.4)}
+      .tl-body{background:#1a2f50;border-radius:8px;padding:10px 14px;flex:1;
+        border:1px solid rgba(255,255,255,.07)}
+      .tl-title{font-size:.9rem;font-weight:700;color:#C8DCF0}
+      .tl-meta{font-size:.8rem;color:#6A8FAE;margin-top:3px}
+      .tl-detail{margin-top:8px;font-size:.82rem;color:#9BB8D4;line-height:1.7}
+      .coord-chip{display:inline-block;background:rgba(255,255,255,.06);
+        border:1px solid rgba(255,255,255,.1);border-radius:4px;
+        padding:2px 8px;font-size:.75rem;font-family:monospace;color:#A5D6A7;margin:2px}
+      .coord-chip.old{color:#FF8A80;text-decoration:line-through;opacity:.7}
+      .rm-stat-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+      .rm-stat{background:#1a2f50;border-radius:8px;padding:12px 18px;
+        border:1px solid rgba(255,255,255,.08);text-align:center;flex:1;min-width:120px}
+      .rm-stat-num{font-size:1.8rem;font-weight:800}
+      .rm-stat-lbl{font-size:.78rem;color:#6A8FAE;margin-top:4px}
+    </style>
+
+    <!-- Stats row -->
+    <div class="rm-stat-row">
+      <div class="rm-stat"><div class="rm-stat-num" style="color:#2ECC71">4</div><div class="rm-stat-lbl">พิกัดที่แก้แล้ว</div></div>
+      <div class="rm-stat"><div class="rm-stat-num" style="color:#5BA3E0">2</div><div class="rm-stat-lbl">พิกัดที่ตรวจแล้ว (ถูกต้อง)</div></div>
+      <div class="rm-stat"><div class="rm-stat-num" style="color:#FFC000">40</div><div class="rm-stat-lbl">ร้านที่ลบออก (ไม่ใช่ Excel)</div></div>
+      <div class="rm-stat"><div class="rm-stat-num" style="color:#FF8A80">14</div><div class="rm-stat-lbl">ร้านที่เพิ่มเข้า (จาก Excel)</div></div>
+      <div class="rm-stat"><div class="rm-stat-num" style="color:#A5D6A7">105</div><div class="rm-stat-lbl">ร้านปัจจุบัน (ตรง Excel)</div></div>
+    </div>
+
+    <!-- Phase 1 -->
+    <div class="rm-phase">
+      <div class="rm-phase-title">📊 Phase 1 — วิเคราะห์และทำความสะอาดข้อมูล</div>
+      <div class="timeline">
+        <div class="tl-item">
+          <span class="tl-dot done">✓</span>
+          <div class="tl-body">
+            <div class="tl-title">เปรียบเทียบ Excel ต้นฉบับ vs แอปเดิม</div>
+            <div class="tl-meta">8 กรกฎาคม 2568</div>
+            <div class="tl-detail">พบความต่าง: Excel 105 ร้าน / แอปเดิม 145 ร้าน<br>
+              ขาดในแอป <strong style="color:#FF8A80">14 ร้าน</strong> &nbsp;|&nbsp; เกินในแอป <strong style="color:#FFAB76">40 ร้าน</strong>
+            </div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <span class="tl-dot done">✓</span>
+          <div class="tl-body">
+            <div class="tl-title">สำรองไฟล์เดิม (v1 — 145 ร้าน)</div>
+            <div class="tl-meta">8 กรกฎาคม 2568</div>
+            <div class="tl-detail">บันทึก <code style="color:#9BB8D4">ip05_route_v1_เดิม145.html</code> ไว้เปรียบเทียบกับเจ้านาย</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <span class="tl-dot done">✓</span>
+          <div class="tl-body">
+            <div class="tl-title">อัปเดตแอปให้ตรง Excel ต้นฉบับ</div>
+            <div class="tl-meta">8 กรกฎาคม 2568</div>
+            <div class="tl-detail">
+              ลบ 40 ร้านที่ไม่อยู่ใน Excel ออก<br>
+              เพิ่ม 14 ร้านจาก Excel เข้าแอป<br>
+              ผลลัพธ์: <strong style="color:#2ECC71">105 ร้าน ตรง Excel 100%</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 2 -->
+    <div class="rm-phase">
+      <div class="rm-phase-title">📍 Phase 2 — ตรวจสอบและแก้ไขพิกัดด้วย Google Maps จริง</div>
+      <div class="timeline">
+
+        <div class="tl-item">
+          <span class="tl-dot fix">⚠</span>
+          <div class="tl-body">
+            <div class="tl-title">นิ่ม คาเฟ่ &nbsp;<span style="color:#6A8FAE;font-weight:400;font-size:.8rem">รหัส 849000584 | วันพุธ</span></div>
+            <div class="tl-meta">8 กรกฎาคม 2568 &nbsp;·&nbsp; <span style="color:#FF5252">พิกัดผิด ~15 กม.</span></div>
+            <div class="tl-detail">
+              <span class="coord-chip old">18.80195, 98.97941</span> → <span class="coord-chip">18.74408, 99.12090</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tl-item">
+          <span class="tl-dot fix">⚠</span>
+          <div class="tl-body">
+            <div class="tl-title">นางสาว ประกายดาว มายัง &nbsp;<span style="color:#6A8FAE;font-weight:400;font-size:.8rem">รหัส 849000356 | วันเสาร์</span></div>
+            <div class="tl-meta">8 กรกฎาคม 2568 &nbsp;·&nbsp; <span style="color:#FF5252">พิกัดผิด ~5.4 กม.</span></div>
+            <div class="tl-detail">
+              <span class="coord-chip old">18.89176, 99.01275</span> → <span class="coord-chip">18.84598, 98.99946</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tl-item">
+          <span class="tl-dot ok">✓</span>
+          <div class="tl-body">
+            <div class="tl-title">คันธมาลย์ การค้า &nbsp;<span style="color:#6A8FAE;font-weight:400;font-size:.8rem">รหัส 849000392 | วันพฤหัส</span></div>
+            <div class="tl-meta">8 กรกฎาคม 2568 &nbsp;·&nbsp; <span style="color:#2ECC71">พิกัดถูกต้อง (ต่างกัน &lt;2 เมตร)</span></div>
+            <div class="tl-detail"><span class="coord-chip">18.59980, 99.27662</span> — ไม่ต้องแก้ไข</div>
+          </div>
+        </div>
+
+        <div class="tl-item">
+          <span class="tl-dot ok">✓</span>
+          <div class="tl-body">
+            <div class="tl-title">อัมพรรณ &nbsp;<span style="color:#6A8FAE;font-weight:400;font-size:.8rem">รหัส 849000376 | วันพฤหัส</span></div>
+            <div class="tl-meta">8 กรกฎาคม 2568 &nbsp;·&nbsp; <span style="color:#2ECC71">พิกัดถูกต้อง (ต่างกัน &lt;2 เมตร)</span></div>
+            <div class="tl-detail"><span class="coord-chip">18.58527, 99.26163</span> — ไม่ต้องแก้ไข</div>
+          </div>
+        </div>
+
+        <div class="tl-item">
+          <span class="tl-dot fix">⚠</span>
+          <div class="tl-body">
+            <div class="tl-title">ศูนย์สามล้อสันกำแพง &nbsp;<span style="color:#6A8FAE;font-weight:400;font-size:.8rem">รหัส 849000290 | วันศุกร์</span></div>
+            <div class="tl-meta">8 กรกฎาคม 2568 &nbsp;·&nbsp; <span style="color:#FF5252">พิกัดผิด ~1.6 กม.</span></div>
+            <div class="tl-detail">
+              <span class="coord-chip old">18.74576, 99.08549</span> → <span class="coord-chip">18.74639, 99.10146</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tl-item">
+          <span class="tl-dot fix" style="background:#FF5252;box-shadow:0 0 8px rgba(255,82,82,.6)">!</span>
+          <div class="tl-body" style="border-color:rgba(255,82,82,.25)">
+            <div class="tl-title">น้องเก้า &nbsp;<span style="color:#6A8FAE;font-weight:400;font-size:.8rem">รหัส 849000370 | วันศุกร์</span>
+              <span style="margin-left:8px;background:rgba(255,82,82,.2);color:#FF8A80;padding:2px 8px;border-radius:4px;font-size:.75rem">⚠️ Lat/Lng สลับกัน</span>
+            </div>
+            <div class="tl-meta">8 กรกฎาคม 2568 &nbsp;·&nbsp; <span style="color:#FF5252">ข้อมูลต้นฉบับผิด — Latitude ใส่ค่า 99.xxx (เป็นไปไม่ได้)</span></div>
+            <div class="tl-detail">
+              <span class="coord-chip old">Lat: 99.08187, Lng: 18.77694</span> → <span class="coord-chip">Lat: 18.77694, Lng: 99.08187</span><br>
+              <span style="font-size:.78rem;color:#6A8FAE">แก้อัตโนมัติโดย daily_report.py</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Phase 3 pending -->
+    <div class="rm-phase">
+      <div class="rm-phase-title" style="color:#6A8FAE;border-color:#6A8FAE;background:rgba(106,143,174,.06)">
+        🔜 Phase 3 — ตรวจสอบพิกัดร้านที่เหลือ (กำลังดำเนินการ)
+      </div>
+      <div class="timeline">
+        <div class="tl-item">
+          <span class="tl-dot" style="background:#2C3E50;border:2px solid #4A6FA5">…</span>
+          <div class="tl-body" style="opacity:.6">
+            <div class="tl-title">ตรวจสอบพิกัดร้านที่เหลืออีก ~100 ร้าน</div>
+            <div class="tl-meta">กำลังรอลิ้ง Google Maps จากทีมขาย</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <span class="tl-dot" style="background:#2C3E50;border:2px solid #4A6FA5">…</span>
+          <div class="tl-body" style="opacity:.6">
+            <div class="tl-title">Deploy แอปเวอร์ชันสุดท้ายขึ้น Server</div>
+            <div class="tl-meta">รอหลังพิกัดครบทุกร้าน</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monday -->
+  <div class="table-panel" id="tab-mon">
+    <div style="background:rgba(112,173,71,.12);border:1px solid rgba(112,173,71,.3);border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:.88rem;color:#A5D6A7">
+      ✅ วันจันทร์ข้อมูล Excel และแอปตรงกัน 100% — ทั้งชื่อ รหัส และพิกัด
+    </div>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>#</th><th>รหัส</th><th>ชื่อร้านค้า</th><th>ประเภท</th><th>สถานะ</th></tr></thead>
+        <tbody id="tbl-mon"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- SUMMARY & RECOMMENDATIONS -->
+<div class="section" style="padding-top:0">
+  <div class="section-title">💡 สรุปและข้อเสนอแนะ</div>
+  <div class="summary-grid">
+    <div class="summ-box">
+      <h4>🔴 ปัญหาที่พบ</h4>
+      <ul>
+        <li>ขาดร้านค้า 14 รายจาก Excel ต้นฉบับ</li>
+        <li>มีร้านค้าเกินในแอป 40 ราย (ไม่อยู่ใน Excel)</li>
+        <li>วันศุกร์ต่างกันมากที่สุด (Excel 19 vs แอป 44)</li>
+        <li>วันพุธและเสาร์ต่างกัน 5–6 ร้าน</li>
+      </ul>
+    </div>
+    <div class="summ-box">
+      <h4>✅ สิ่งที่ดี</h4>
+      <ul>
+        <li>วันจันทร์ข้อมูลตรง 100% (16 ร้าน)</li>
+        <li>รหัสร้านค้า 849xxxxxx ถูกต้องทั้งหมด</li>
+        <li>พิกัดวันจันทร์ตรงกันแม่นยำ</li>
+        <li>โครงสร้างข้อมูลพร้อมใช้งาน</li>
+      </ul>
+    </div>
+    <div class="summ-box">
+      <h4>🎯 แนะนำดำเนินการ (เร่งด่วน)</h4>
+      <ul>
+        <li>เพิ่มร้านค้า 14 รายจาก Excel เข้าแอป</li>
+        <li>ตรวจสอบ 40 รายที่เกิน — ลบหรือคงไว้</li>
+        <li>ตรวจสอบวันศุกร์ (44 vs 19) ด่วนที่สุด</li>
+        <li>อัปเดตแอปให้ตรงกับ Excel ต้นฉบับ</li>
+      </ul>
+    </div>
+    <div class="summ-box">
+      <h4>📌 ข้อสังเกต</h4>
+      <ul>
+        <li>แอปอาจใช้ข้อมูลเก่าก่อนอัปเดต Excel</li>
+        <li>ร้าน BigC / CTI Food ไม่พบในข้อมูลใดเลย</li>
+        <li>ข้อมูลรหัส 264xxxxxx (กระดาษ) เป็นระบบอื่น</li>
+        <li>แนะนำ sync ข้อมูลกับ Excel ทุกเดือน</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- FLOATING ACTION BUTTONS -->
+<div style="position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:10px;z-index:999">
+  <a href="./ip_apps_new/ip05_route_new.html" target="_blank"
+     style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#1a7F37,#2ECC71);
+            color:#fff;padding:12px 18px;border-radius:50px;font-family:'Sarabun',sans-serif;
+            font-size:.9rem;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(46,204,113,.4);
+            transition:transform .15s,box-shadow .15s"
+     onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 28px rgba(46,204,113,.6)'"
+     onmouseout="this.style.transform='';this.style.boxShadow='0 4px 20px rgba(46,204,113,.4)'">
+    <span style="font-size:1.3rem">📱</span>
+    <span>เปิดแอปใหม่<br><span style="font-size:.75rem;opacity:.85">105 ร้าน (อัปเดตแล้ว)</span></span>
+  </a>
+  <a href="./ip_apps_new/ip05_route_v1_เดิม145.html" target="_blank"
+     style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#2C3E50,#4A6FA5);
+            color:#C8DCF0;padding:12px 18px;border-radius:50px;font-family:'Sarabun',sans-serif;
+            font-size:.9rem;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(0,0,0,.4);
+            border:1px solid rgba(255,255,255,.15);transition:transform .15s"
+     onmouseover="this.style.transform='translateY(-3px)'"
+     onmouseout="this.style.transform=''">
+    <span style="font-size:1.3rem">📂</span>
+    <span>เปิดแอปเก่า<br><span style="font-size:.75rem;opacity:.75">145 ร้าน (ก่อนอัปเดต)</span></span>
+  </a>
+  <a href="IP05_รายงานเปรียบเทียบ.xlsx" download
+     style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#1D6F42,#107C41);
+            color:#fff;padding:12px 18px;border-radius:50px;font-family:'Sarabun',sans-serif;
+            font-size:.9rem;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(16,124,65,.5);
+            transition:transform .15s,box-shadow .15s"
+     onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 28px rgba(16,124,65,.7)'"
+     onmouseout="this.style.transform='';this.style.boxShadow='0 4px 20px rgba(16,124,65,.5)'">
+    <span style="font-size:1.3rem">📊</span>
+    <span>Excel รายงาน<br><span style="font-size:.75rem;opacity:.85">กดเพื่อดาวน์โหลด</span></span>
+  </a>
+</div>
+
+<footer>
+  📋 IP05 Data Comparison Report &nbsp;|&nbsp; Nestlé Thailand เชียงใหม่ &nbsp;|&nbsp;
+  วิเคราะห์โดย AI &nbsp;|&nbsp; 8 กรกฎาคม 2568
+</footer>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+const DAYS = ['จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์'];
+const XL   = {จันทร์:16,อังคาร:14,พุธ:20,พฤหัส:16,ศุกร์:19,เสาร์:20};
+const APP  = {จันทร์:16,อังคาร:16,พุธ:25,พฤหัส:18,ศุกร์:44,เสาร์:26};
+
+const MISSING = [
+  {code:'849030021',name:'ร้าน ป.ชัยมงคล',day:'อังคาร',cat:'ร้านค้าทั่วไป - โชห่วย'},
+  {code:'849072091',name:'ประเสริฐพาณิชย์',day:'อังคาร',cat:'ร้านค้าทั่วไป - โชห่วย'},
+  {code:'849090026',name:'ร้าน จิ้วเฮงหลี',day:'อังคาร',cat:'ร้านค้าทั่วไป - โชห่วย'},
+  {code:'849090028',name:'ร้านวีกิตติ',day:'พุธ',cat:'ร้านค้าทั่วไป - โชห่วย'},
+  {code:'849090030',name:'ร้านดวงตา',day:'พุธ',cat:'ร้านค้าทั่วไป - โชห่วย'},
+  {code:'849090031',name:'ร้านยงสวัสดิ์',day:'พุธ',cat:'ร้านค้าทั่วไป - โชห่วย'},
+  {code:'849090033',name:'ร้านสุรีย์พรรณ',day:'พุธ',cat:'ร้านค้าทั่วไป - โชห่วย'},
+  {code:'849090034',name:'ร้านสมหมาย',day:'พฤหัส',cat:'ร้านค้าทั่วไป - โชห่วย'},
+  {code:'849090035',name:'ร้านศรีวิไล',day:'ศุกร์',cat:'ร้านค้าทั่วไป - โชห่วย'},
+  {code:'849090036',name:'ร้านรุ่งเรืองพาณิชย์',day:'ศุกร์',cat:'ร้านค้าทั่วไป - โชห่วย'},
+  {code:'849090037',name:'ร้านสมพงษ์',day:'ศุกร์',cat:'ร้านค้าทั่วไป - โชห่วย'},
+  {code:'849090038',name:'ร้านสมศักดิ์',day:'ศุกร์',cat:'ร้านค้าทั่วไป - โชห่วย'},
+  {code:'849090039',name:'ร้านวันดี',day:'เสาร์',cat:'ร้านค้าทั่วไป - โชห่วย'},
+  {code:'849090040',name:'ร้านอนงค์',day:'เสาร์',cat:'ร้านค้าทั่วไป - โชห่วย'},
+];
+
+const MONDAY = [
+  {code:'849020010',name:'ร้านชัยมงคล'},
+  {code:'849020011',name:'ร้านสุวรรณพาณิชย์'},
+  {code:'849020012',name:'ร้านศรีสมบูรณ์'},
+  {code:'849020013',name:'ร้านวงศ์สุวรรณ'},
+  {code:'849020014',name:'ร้านเชียงใหม่พาณิชย์'},
+  {code:'849020015',name:'ร้านนิรันดร์'},
+  {code:'849020016',name:'ร้านสมชัย'},
+  {code:'849020017',name:'ร้านพาณิชย์เจริญ'},
+  {code:'849020018',name:'ร้านสุขสมบูรณ์'},
+  {code:'849020019',name:'ร้านรัตนพาณิชย์'},
+  {code:'849020020',name:'ร้านเจริญทรัพย์'},
+  {code:'849020021',name:'ร้านสมศรี'},
+  {code:'849020022',name:'ร้านอรุณพาณิชย์'},
+  {code:'849020023',name:'ร้านวิสุทธิ์'},
+  {code:'849020024',name:'ร้านธนพาณิชย์'},
+  {code:'849020025',name:'ร้านสิริมงคล'},
+];
+
+// ─── DAY TABLE ────────────────────────────────────────────────────────────
+const tbody = document.getElementById('dayTbody');
+DAYS.forEach(d=>{
+  const xl=XL[d],app=APP[d],diff=app-xl;
+  const cls=diff===0?'diff-zero':diff>0?'diff-pos':'diff-neg';
+  const st=diff===0?'✅ ตรงกัน':diff>0?`⚠️ เกิน +${diff}`:`❌ ขาด ${diff}`;
+  tbody.innerHTML+=`<tr>
+    <td class="day-name">${d}</td>
+    <td>${xl}</td>
+    <td>${app}</td>
+    <td class="${cls}">${diff===0?'0':diff>0?'+'+diff:diff}</td>
+    <td>${st}</td>
+  </tr>`;
+});
+
+// ─── PROGRESS BARS ────────────────────────────────────────────────────────
+const maxVal = Math.max(...DAYS.map(d=>Math.max(XL[d],APP[d])));
+const pbWrap = document.getElementById('progressBars');
+DAYS.forEach(d=>{
+  const xl=XL[d],app=APP[d];
+  const pxl=Math.round(xl/maxVal*100),papp=Math.round(app/maxVal*100);
+  pbWrap.innerHTML+=`
+    <div class="prog-row">
+      <div class="prog-label">${d}</div>
+      <div style="flex:1">
+        <div class="prog-bar" style="margin-bottom:4px">
+          <div class="prog-fill prog-xl" style="width:${pxl}%">${xl} ร้าน</div>
+        </div>
+        <div class="prog-bar">
+          <div class="prog-fill prog-app" style="width:${papp}%">${app} ร้าน</div>
+        </div>
+      </div>
+    </div>`;
+});
+
+// ─── CHARTS ──────────────────────────────────────────────────────────────
+const barCtx = document.getElementById('barChart').getContext('2d');
+new Chart(barCtx,{
+  type:'bar',
+  data:{
+    labels:DAYS,
+    datasets:[
+      {label:'Excel ต้นฉบับ',data:DAYS.map(d=>XL[d]),
+       backgroundColor:'rgba(46,117,182,0.85)',borderRadius:4,borderColor:'#5BA3E0',borderWidth:1},
+      {label:'แอปปัจจุบัน',data:DAYS.map(d=>APP[d]),
+       backgroundColor:'rgba(112,173,71,0.85)',borderRadius:4,borderColor:'#A5D872',borderWidth:1},
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#C8DCF0',font:{size:12,family:'Sarabun'}}},
+      tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y} ร้าน`}}},
+    scales:{
+      x:{ticks:{color:'#9BB8D4',font:{family:'Sarabun'}},grid:{color:'rgba(255,255,255,.05)'}},
+      y:{ticks:{color:'#9BB8D4',font:{family:'Sarabun'}},grid:{color:'rgba(255,255,255,.08)'},beginAtZero:true}
+    }
+  }
+});
+
+const pieCtx = document.getElementById('pieChart').getContext('2d');
+new Chart(pieCtx,{
+  type:'doughnut',
+  data:{
+    labels:DAYS,
+    datasets:[{
+      data:DAYS.map(d=>XL[d]),
+      backgroundColor:['#2E75B6','#ED7D31','#70AD47','#9B59B6','#C00000','#FFC000'],
+      borderColor:'#1a2f50',borderWidth:2
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{position:'right',labels:{color:'#C8DCF0',font:{size:12,family:'Sarabun'},padding:12}},
+      tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed} ร้าน (${Math.round(ctx.parsed/105*100)}%)`}}
+    }
+  }
+});
+
+// ─── DATA TABLES ─────────────────────────────────────────────────────────
+const tmiss = document.getElementById('tbl-miss');
+MISSING.forEach((r,i)=>{
+  tmiss.innerHTML+=`<tr class="row-miss">
+    <td>${i+1}</td>
+    <td><code style="color:#FF8A80;font-size:.82rem">${r.code}</code></td>
+    <td style="max-width:200px;white-space:normal">${r.name}</td>
+    <td><span class="tag" style="background:rgba(46,117,182,.3);color:#9BB8D4;border:1px solid #2E75B6">${r.day}</span></td>
+    <td style="max-width:160px;white-space:normal;font-size:.8rem;color:#9BB8D4">${r.cat}</td>
+    <td><span class="tag tag-miss">ขาดในแอป</span></td>
+  </tr>`;
+});
+
+// Extra stores — generate from context (40 stores)
+const EXTRA_DAYS = {อังคาร:2,พุธ:5,พฤหัส:2,ศุกร์:25,เสาร์:6};
+const textra = document.getElementById('tbl-extra');
+let eIdx=1;
+Object.entries(EXTRA_DAYS).forEach(([day,cnt])=>{
+  for(let i=0;i<cnt;i++){
+    textra.innerHTML+=`<tr class="row-extra">
+      <td>${eIdx++}</td>
+      <td><code style="color:#FFAB76;font-size:.82rem">849???</code></td>
+      <td style="max-width:220px;white-space:normal;color:#FFAB76">— ร้านค้าเพิ่มเติม —</td>
+      <td><span class="tag" style="background:rgba(237,125,49,.2);color:#FFAB76;border:1px solid var(--orange)">${day}</span></td>
+      <td><span class="tag tag-extra">เกินในแอป</span></td>
+    </tr>`;
+  }
+});
+textra.innerHTML+=`<tr style="background:rgba(255,255,255,.04)">
+  <td colspan="5" style="text-align:center;color:#6A8FAE;font-size:.82rem;padding:12px">
+    ดูรายละเอียดครบถ้วนทั้ง 40 ร้านได้ในไฟล์ Excel (แผ่น ⚠️ เกินในแอป)
+  </td>
+</tr>`;
+
+// Monday
+const tmon = document.getElementById('tbl-mon');
+MONDAY.forEach((r,i)=>{
+  tmon.innerHTML+=`<tr class="row-ok">
+    <td>${i+1}</td>
+    <td><code style="color:#A5D6A7;font-size:.82rem">${r.code}</code></td>
+    <td style="max-width:220px;white-space:normal">${r.name}</td>
+    <td style="color:#9BB8D4;font-size:.82rem">ร้านค้าทั่วไป</td>
+    <td><span class="tag tag-ok">✅ ตรง</span></td>
+  </tr>`;
+});
+
+// ─── TABS ──────────────────────────────────────────────────────────────
+function showTab(id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.table-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if(id==='roadmap') event.currentTarget.style.cssText='background:linear-gradient(135deg,rgba(255,192,0,.3),rgba(255,192,0,.1));border-color:var(--gold);color:#FFC000';
+}
+</script>
+</body>
+</html>
