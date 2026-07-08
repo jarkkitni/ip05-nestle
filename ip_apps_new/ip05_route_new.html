@@ -2281,16 +2281,31 @@ function openQR() { document.getElementById('qrModal').classList.add('open'); }
 // ── REPORT ───────────────────────────────────────────────
 // ── Order System ─────────────────────────────────────────
 var NESTLE_PRODUCTS = [
-  { id:'milo_uht180', name:'MILO UHT 180ml', unit:'ลัง (24ขวด)' },
-  { id:'milo_uht1l', name:'MILO UHT 1L', unit:'ลัง (12กล่อง)' },
-  { id:'milo_pow400', name:'MILO ผง 400g', unit:'กป.' },
-  { id:'bear_brand', name:'นมตราหมี 140ml', unit:'ลัง (48ขวด)' },
-  { id:'nescafe_3in1', name:'เนสกาแฟ 3in1', unit:'ลัง (12แพ็ค)' },
-  { id:'kitkat_4f', name:'KitKat 4F 35g', unit:'กล่อง (36ชิ้น)' },
-  { id:'kitkat_mini', name:'KitKat Mini Bag', unit:'กล่อง' },
-  { id:'smarties', name:'Smarties', unit:'กล่อง' },
-  { id:'crunch', name:'Crunch Bar', unit:'กล่อง' },
-  { id:'maggi_cube', name:'Maggi ก้อนซุป', unit:'โหล' }
+  // ถังไอศครีม
+  {id:'12024248', name:'วาเฟอร์รักวย', cat:'🪣 ถังไอศครีม', price:149.50, unit:'CS'},
+  {id:'12040556', name:'ไม่โล ถังดัก', cat:'🪣 ถังไอศครีม', price:189.00, unit:'CS'},
+  {id:'12051361', name:'คุกกี้ แอนด์ ครีม ถังดัก', cat:'🪣 ถังไอศครีม', price:189.00, unit:'CS'},
+  {id:'12060079', name:'ถังดัก มอคคาชิพ', cat:'🪣 ถังไอศครีม', price:189.00, unit:'CS'},
+  {id:'12060121', name:'ถังดัก วานิลลา', cat:'🪣 ถังไอศครีม', price:169.00, unit:'CS'},
+  {id:'12060123', name:'ถังดัก ช็อกโกแลต', cat:'🪣 ถังไอศครีม', price:169.00, unit:'CS'},
+  // แท่ง/ซอง
+  {id:'12296845', name:'เอสกี้มีเสื้อ 40×80 กรัม', cat:'🍦 แท่ง/ซอง', price:299.07, unit:'CS'},
+  {id:'12300996', name:'แพนด้า แห้ง', cat:'🍦 แท่ง/ซอง', price:220.00, unit:'CS'},
+  {id:'12628340', name:'ไม่โลช็อกมอลต์แห้ง TT', cat:'🍦 แท่ง/ซอง', price:285.00, unit:'CS'},
+  {id:'12434815', name:'ช็อกป็อป วานิลลา (ใหม่)', cat:'🍦 แท่ง/ซอง', price:199.00, unit:'CS'},
+  {id:'12434822', name:'ช็อกป็อป ช็อกโกแลต (ใหม่)', cat:'🍦 แท่ง/ซอง', price:199.00, unit:'CS'},
+  {id:'12253187', name:'ยักษ์ตร้า เทอร์โบ', cat:'🍦 แท่ง/ซอง', price:189.00, unit:'CS'},
+  {id:'13756565', name:'ไม่โลแขนวิ้ว', cat:'🍦 แท่ง/ซอง', price:245.00, unit:'CS'},
+  {id:'13756560', name:'เอ็กซ์ตรีม มี้นต์', cat:'🍦 แท่ง/ซอง', price:235.00, unit:'CS'},
+  {id:'13756562', name:'เอ็กซ์ตรีม แฮรี่', cat:'🍦 แท่ง/ซอง', price:230.00, unit:'CS'},
+  {id:'13756567', name:'ไม่โลช็อกมอลต์แห้ง MT', cat:'🍦 แท่ง/ซอง', price:280.00, unit:'CS'},
+  // นม/เครื่องดื่ม
+  {id:'12612190', name:'นมหมีมิ้งกี้ 50×55 กรัม', cat:'🥛 นม/เครื่องดื่ม', price:315.00, unit:'CS'},
+  {id:'14506884', name:'เอสกี้มิสไชด์ 52 กรัม', cat:'🥛 นม/เครื่องดื่ม', price:198.00, unit:'CS'},
+  // ถ้วย/บาร์
+  {id:'12385000', name:'ไม่โล ถ้วย 18×55 กรัม', cat:'🍨 ถ้วย/บาร์', price:175.00, unit:'CS'},
+  // FS
+  {id:'FS001', name:'ไอศครีม FS รวม (ถามราคา)', cat:'🏪 FS/Food Service', price:0, unit:'CS'}
 ];
 
 function getOrder(code) {
@@ -2304,7 +2319,7 @@ function getAllOrders() {
     var ord = getOrder(s.code);
     var items = [];
     NESTLE_PRODUCTS.forEach(function(p){
-      if (ord[p.id] && ord[p.id]>0) items.push({name:p.name, unit:p.unit, qty:ord[p.id]});
+      if (ord[p.id] && ord[p.id]>0) items.push({name:p.name, unit:p.unit, price:p.price||0, qty:ord[p.id]});
     });
     if (items.length>0) result.push({store:s, items:items});
   });
@@ -2316,17 +2331,23 @@ function openOrder(code) {
   if (!s) return;
   var ord = getOrder(code);
   var body = document.getElementById('orderBody');
-  var h = '<div style="font-size:13px;font-weight:800;color:#1a1a2e;margin-bottom:12px">📦 '+s.name+'</div>';
-  h += '<div style="font-size:11px;color:#666;margin-bottom:14px">ใส่จำนวนที่ต้องการสั่ง (0 = ไม่สั่ง)</div>';
-  NESTLE_PRODUCTS.forEach(function(p){
-    var qty = ord[p.id]||0;
-    h += '<div class="order-row">';
-    h += '<div class="order-item-name"><div>'+p.name+'</div><div class="order-unit">'+p.unit+'</div></div>';
-    h += '<div class="order-qty-ctrl">';
-    h += '<button class="order-qty-btn" onclick="adjQty(\''+p.id+'\',-1)">－</button>';
-    h += '<input class="order-qty-inp" id="qty_'+p.id+'" type="number" min="0" value="'+qty+'">';
-    h += '<button class="order-qty-btn" onclick="adjQty(\''+p.id+'\',1)">＋</button>';
-    h += '</div></div>';
+  var h = '<div style="font-size:13px;font-weight:800;color:#1a1a2e;margin-bottom:4px">📦 '+s.name+'</div>';
+  h += '<div style="font-size:11px;color:#666;margin-bottom:14px">ใส่จำนวน CS ที่ต้องการสั่ง</div>';
+  // group by cat
+  var cats = [];
+  NESTLE_PRODUCTS.forEach(function(p){ if(cats.indexOf(p.cat)<0) cats.push(p.cat); });
+  cats.forEach(function(cat){
+    h += '<div style="font-size:11px;font-weight:800;color:#ea580c;background:#fff7ed;padding:4px 8px;border-radius:6px;margin-bottom:8px">'+cat+'</div>';
+    NESTLE_PRODUCTS.filter(function(p){ return p.cat===cat; }).forEach(function(p){
+      var qty = ord[p.id]||0;
+      h += '<div class="order-row">';
+      h += '<div class="order-item-name"><div>'+p.name+'</div><div class="order-unit">'+(p.price>0?'฿'+p.price.toFixed(2)+'/CS':'ถามราคา')+'</div></div>';
+      h += '<div class="order-qty-ctrl">';
+      h += '<button class="order-qty-btn" onclick="adjQty(\''+p.id+'\',-1)">－</button>';
+      h += '<input class="order-qty-inp" id="qty_'+p.id+'" type="number" min="0" value="'+qty+'">';
+      h += '<button class="order-qty-btn" onclick="adjQty(\''+p.id+'\',1)">＋</button>';
+      h += '</div></div>';
+    });
   });
   h += '<button class="order-save-btn" id="orderSaveBtn">💾 บันทึกออเดอร์</button>';
   h += '<button class="order-clear-btn" id="orderClearBtn">🗑 ล้างออเดอร์</button>';
@@ -2401,9 +2422,13 @@ function openReport() {
     txt += '🛒 สรุปออเดอร์ ('+orders.length+' ร้าน)\n';
     orders.forEach(function(ord){
       txt += '\n📦 '+ord.store.name+' ('+ord.store.code+')\n';
+      var storeTotal = 0;
       ord.items.forEach(function(item){
-        txt += '  • '+item.name+' × '+item.qty+' '+item.unit+'\n';
+        var lineTotal = item.price>0 ? item.qty*item.price : 0;
+        storeTotal += lineTotal;
+        txt += '  • '+item.name+' × '+item.qty+' CS'+(lineTotal>0?' (฿'+lineTotal.toFixed(2)+')':'')+'\n';
       });
+      if (storeTotal>0) txt += '  💰 รวม ฿'+storeTotal.toFixed(2)+'\n';
     });
   }
   document.getElementById('reportText').textContent = txt;
