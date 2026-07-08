@@ -55,8 +55,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 .sc-dist{font-size:11px;color:var(--sub);margin-left:auto}
 .sc-code{font-size:10px;color:#9ca3af}
 /* MAP */
-#mapWrap{display:none;height:calc(100vh - 140px)}
-#map{height:100%;width:100%}
+#mapWrap{display:none;height:calc(100vh - 140px);flex-direction:column}
+#mapCtrl{flex-shrink:0}
+#map{flex:1;width:100%;min-height:0}
 /* BOTTOM ACTIONS */
 .bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e5e7eb;padding:8px 12px;display:flex;gap:8px;z-index:200;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
 .bb-btn{flex:1;border:none;border-radius:10px;padding:10px 4px;font-size:11px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
@@ -249,7 +250,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 <div id="storeList"></div>
 
 <!-- MAP -->
-<div id="mapWrap"><div id="map"></div></div>
+<div id="mapWrap">
+  <div id="mapCtrl" style="background:#fff;padding:6px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #e5e7eb;flex-wrap:wrap;min-height:38px">
+    <button onclick="window.open(MY_MAPS_URL,'_blank')" style="background:#1a73e8;color:#fff;border:none;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">🗺️ Google My Maps</button>
+    <div id="dayLegend" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex:1"></div>
+  </div>
+  <div id="map"></div>
+</div>
 
 <!-- BOTTOM BAR -->
 <div class="bottom-bar">
@@ -357,6 +364,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 const IP_ID = 'IP05';
 const IP_NAME = 'ดอยสะเก็ด/สันทราย';
 const IP_COLOR = '#6a1b9a';
+const DAY_COLORS = {'จันทร์':'#1a73e8','อังคาร':'#ea4335','พุธ':'#34a853','พฤหัส':'#f9ab00','ศุกร์':'#fa7b17','เสาร์':'#9334e6','อาทิตย์':'#24c1e0'};
+const MY_MAPS_MID = '1NeB3YO91cClHi3j1Ou_zZN1AJJm4DYs';
+const MY_MAPS_URL = 'https://www.google.com/maps/d/u/0/viewer?mid='+MY_MAPS_MID;
+// รหัสร้านที่แก้พิกัดผ่าน script (บันทึกเพื่อแสดงสัญลักษณ์ ⭐)
+const SCRIPT_FIXED_CODES = new Set(['849000584','849000356','849000290']);
 const STORES = [
   {
     "name": "POP มินิมาร์ท",
@@ -1537,6 +1549,7 @@ let userLat = null, userLng = null;
 let markers = [];
 let _photoCode = null;
 let _routeSorted = [];
+let routePolyline = null;
 
 // ── localStorage helpers ──────────────────────────────────
 function lsKey(code) { return IP_ID+'_v_'+code; }
@@ -1692,18 +1705,20 @@ function toggleMap() {
   const lw = document.getElementById('storeList');
   const mw = document.getElementById('mapWrap');
   const sw = document.getElementById('searchWrap');
-  const showing = mw.style.display==='block';
+  const showing = mw.style.display==='block'||mw.style.display==='flex';
   if (showing) {
     mw.style.display='none';
     lw.style.display='flex';
     sw.style.display='';
   } else {
-    mw.style.display='block';
+    mw.style.display='flex';
     lw.style.display='none';
     sw.style.display='none';
     initMap();
   }
 }
+
+function isStoreFixed(code) { return !!getLocOverride(code) || SCRIPT_FIXED_CODES.has(code); }
 
 function initMap() {
   if (mapInited) return;
@@ -1712,19 +1727,44 @@ function initMap() {
   const centerLng = STORES.reduce((a,s)=>a+s.lng,0)/STORES.length;
   leafMap = L.map('map').setView([centerLat, centerLng], 10);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(leafMap);
+
+  // build day-color legend
+  const legendEl = document.getElementById('dayLegend');
+  if (legendEl) {
+    const days = ['จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์'];
+    legendEl.innerHTML = days.map(d=>`<span style="display:flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:#374151"><span style="width:9px;height:9px;border-radius:50%;background:${DAY_COLORS[d]};display:inline-block;border:1.5px solid #fff;box-shadow:0 1px 2px rgba(0,0,0,.35)"></span>${d}</span>`).join('');
+  }
+
   STORES.forEach(s => {
     if (!s.lat||!s.lng) return;
     const vis = isVisited(s.code);
-    const col = vis ? '#16a34a' : IP_COLOR;
-    const icon = L.divIcon({
-      html: `<div style="background:${col};width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>`,
-      iconSize:[12,12], iconAnchor:[6,6], popupAnchor:[0,-8], className:''
-    });
-    const mk = L.marker([s.lat,s.lng],{icon}).addTo(leafMap);
-    mk.bindPopup(`<b>${s.name}</b><br>${s.day} — ${s.addr||''}<br><a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=driving" target="_blank">นำทาง</a>`);
+    const ov = getLocOverride(s.code);
+    // ใช้พิกัดที่แก้แล้ว (localStorage override) ถ้ามี
+    const loc = ov ? {lat:ov.lat,lng:ov.lng} : {lat:s.lat,lng:s.lng};
+    const dayCol = DAY_COLORS[s.day] || IP_COLOR;
+    const col = vis ? '#16a34a' : dayCol;
+    const fixed = isStoreFixed(s.code);
+    const sz = fixed ? 15 : 11;
+    const iconHtml = fixed
+      ? `<div style="position:relative;width:${sz}px;height:${sz}px"><div style="background:${col};width:${sz}px;height:${sz}px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45)"></div><div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:11px;line-height:1;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))">⭐</div></div>`
+      : `<div style="background:${col};width:${sz}px;height:${sz}px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>`;
+    const icon = L.divIcon({html:iconHtml, iconSize:[sz,fixed?sz+10:sz], iconAnchor:[sz/2,fixed?sz+5:sz/2], popupAnchor:[0,-sz], className:''});
+    const mk = L.marker([loc.lat,loc.lng],{icon}).addTo(leafMap);
+    mk.bindPopup(`<b>${s.name}</b><br><span style="color:${dayCol};font-weight:700">${s.day}</span> — ${s.addr||''}${fixed?'<br><span style="color:#16a34a;font-size:11px">⭐ พิกัดแก้แล้ว</span>':''}<br><a href="https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}&travelmode=driving" target="_blank">🗺️ นำทาง Google Maps</a>`);
     markers.push(mk);
   });
   if (userLat) L.circleMarker([userLat,userLng],{radius:8,color:'#2563eb',fillOpacity:1}).addTo(leafMap).bindPopup('ตำแหน่งของฉัน');
+  // วาดเส้นทางถ้ามีอยู่แล้ว
+  if (_routeSorted.length) drawRouteOnMap(_routeSorted);
+}
+
+function drawRouteOnMap(sorted) {
+  if (!leafMap || !sorted.length) return;
+  if (routePolyline) { leafMap.removeLayer(routePolyline); routePolyline = null; }
+  const latlngs = sorted.map(s=>{const ov=getLocOverride(s.code);return ov?[ov.lat,ov.lng]:[s.lat,s.lng];});
+  if (userLat) latlngs.unshift([userLat,userLng]);
+  routePolyline = L.polyline(latlngs,{color:'#ea4335',weight:3,opacity:.7,dashArray:'7,5'}).addTo(leafMap);
+  try { leafMap.fitBounds(routePolyline.getBounds(),{padding:[24,24]}); } catch(e){}
 }
 
 // ── geolocation ──────────────────────────────────────────
@@ -2091,6 +2131,7 @@ function renderRoute() {
     remaining.splice(bestIdx,1);
   }
   _routeSorted = sorted;
+  if (mapInited && leafMap) drawRouteOnMap(sorted);
   let cumKm = 0;
   let html = '<button class="route-maps-btn" id="openMapsAll">🗺️ เปิด Google Maps ทั้งหมด</button>';
   html += '<div style="padding:0 0 80px">';
