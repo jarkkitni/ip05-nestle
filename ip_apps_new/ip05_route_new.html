@@ -157,6 +157,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 .qa-btn.maps{background:#eff6ff;color:#1d4ed8}
 .qa-btn.call{background:#f0fdf4;color:#15803d}
 .sb-order{background:#fff7ed;color:#ea580c}
+.gps-warn-box{background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;padding:12px 14px;margin-top:8px}
+.gps-warn-title{font-weight:800;font-size:13px;color:#92400e;margin-bottom:4px}
+.gps-warn-msg{font-size:12px;color:#92400e;line-height:1.5}
+.gps-warn-btns{display:flex;gap:8px;margin-top:10px}
+.gps-warn-override{flex:1;background:#dc2626;color:#fff;border:none;border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer}
+.gps-warn-cancel{flex:1;background:#e5e7eb;color:#374151;border:none;border-radius:8px;padding:9px;font-size:12px;cursor:pointer}
 .qa-btn.waze{background:#fff8e6;color:#b45309;grid-column:1/-1}
 .qa-detail-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;padding-top:10px;border-top:1px solid #f0f0f0}
 .qa-small-btn{border:1.5px solid #e5e7eb;background:#fff;border-radius:12px;padding:11px 8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;color:#374151}
@@ -1568,7 +1574,7 @@ function noteKey(code) { return IP_ID+'_n_'+code; }
 function statusKey(code) { return IP_ID+'_vs_'+code; }
 function photoKey(code) { return IP_ID+'_ph_'+code; }
 function getStatusObj(code) { const s=localStorage.getItem(statusKey(code)); return s?JSON.parse(s):null; }
-function setStatusObj(code, s, note) { localStorage.setItem(statusKey(code), JSON.stringify({s:s,note:note||'',ts:Date.now()})); }
+function setStatusObj(code, s, note, gps) { localStorage.setItem(statusKey(code), JSON.stringify({s:s,note:note||'',ts:Date.now(),gps:gps||null})); }
 function isVisited(code) {
   const so=getStatusObj(code);
   if (so && so.s==='v') return true;
@@ -1833,6 +1839,7 @@ function openQuick(code) {
     + '<button class="status-btn sb-rs" id="qaSbRS"><div class="si">📅</div>นัดใหม่</button>'
     + '<button class="status-btn sb-order" id="qaSbOrder" style="grid-column:1/-1"><div class="si">🛒</div>สั่งซื้อสินค้า'+(Object.keys(getOrder(code)).length>0?' ✅':'')+'</button>'
     + '</div>'
+    + '<div id="qaGpsWarn" style="display:none"></div>'
     + '<div class="status-note-wrap" id="qaNoteWrap" style="display:none">'
     + '<input class="status-note-inp" id="qaNoteInp" placeholder="หมายเหตุ (ไม่บังคับ)...">'
     + '<button class="status-save-btn" id="qaSaveStatus" style="margin-top:8px">💾 บันทึก</button>'
@@ -1843,28 +1850,75 @@ function openQuick(code) {
   body.innerHTML = '';
   body.appendChild(el);
   let pendingStatus = null;
-  function showNoteForStatus(s) {
-    pendingStatus = s;
+  let pendingGps = null;
+  function showNoteForStatus(sv) {
+    pendingStatus = sv;
     document.getElementById('qaNoteWrap').style.display = '';
     document.getElementById('qaNoteInp').value = curNote;
     document.getElementById('qaNoteInp').focus();
+  }
+  function showGpsWarnPanel(distM, gps) {
+    var w = document.getElementById('qaGpsWarn');
+    var msg = (gps && distM !== null)
+      ? 'คุณอยู่ห่างจากร้าน <b>' + distM + ' เมตร</b><br>ต้องอยู่ในระยะ 300 ม. เพื่อยืนยัน'
+      : 'ไม่สามารถตรวจสอบตำแหน่ง GPS ได้<br>กรุณาเปิดสิทธิ์ Location ในเบราว์เซอร์';
+    w.style.display = '';
+    w.innerHTML = '<div class="gps-warn-box">'
+      + '<div class="gps-warn-title">⚠️ ตำแหน่งไม่ตรง</div>'
+      + '<div class="gps-warn-msg">' + msg + '</div>'
+      + '<div class="gps-warn-btns">'
+      + '<button class="gps-warn-override" id="qaGpsForce">บันทึกอยู่ดี ⚠️</button>'
+      + '<button class="gps-warn-cancel" id="qaGpsCancel">ยกเลิก</button>'
+      + '</div></div>';
+    document.getElementById('qaGpsForce').onclick = function() {
+      w.style.display = 'none';
+      pendingGps = gps ? Object.assign({}, gps, {override:true}) : {override:true};
+      showNoteForStatus('v');
+    };
+    document.getElementById('qaGpsCancel').onclick = function() {
+      w.style.display = 'none';
+      pendingGps = null;
+    };
   }
   document.getElementById('qaClose').onclick = function(){ closeModal('quickModal'); };
   document.getElementById('qaMaps').onclick = function(){ navGoogle(lat,lng); };
   document.getElementById('qaCall').onclick = function(){ if(s.tel) window.location='tel:'+s.tel; else navGoogle(lat,lng); };
   document.getElementById('qaWaze').onclick = function(){ navWaze(lat,lng); };
   document.getElementById('qaSbOrder').onclick = function(){ closeModal('quickModal'); openOrder(code); };
-  document.getElementById('qaSbV').onclick = function(){ showNoteForStatus('v'); };
+  document.getElementById('qaSbV').onclick = function(){
+    if (!navigator.geolocation) { showGpsWarnPanel(null, null); return; }
+    toast('📍 กำลังตรวจสอบตำแหน่ง...');
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        var myLat = pos.coords.latitude;
+        var myLng = pos.coords.longitude;
+        var distM = Math.round(distKm(myLat, myLng, lat, lng) * 1000);
+        var gps = {lat:myLat, lng:myLng, dist:distM, acc:Math.round(pos.coords.accuracy)};
+        if (distM <= 300) {
+          pendingGps = gps;
+          showNoteForStatus('v');
+          toast('📍 ยืนยันตำแหน่ง ห่าง ' + distM + ' ม. ✅');
+        } else {
+          showGpsWarnPanel(distM, gps);
+        }
+      },
+      function() { showGpsWarnPanel(null, null); },
+      {enableHighAccuracy:true, timeout:10000, maximumAge:0}
+    );
+  };
   document.getElementById('qaSbC').onclick = function(){ showNoteForStatus('c'); };
   document.getElementById('qaSbNF').onclick = function(){ showNoteForStatus('nf'); };
   document.getElementById('qaSbRS').onclick = function(){ showNoteForStatus('rs'); };
   document.getElementById('qaSaveStatus').onclick = function(){
     if (!pendingStatus) return;
     const note = document.getElementById('qaNoteInp').value;
-    setStatusObj(code, pendingStatus, note);
+    var gpsToSave = (pendingStatus==='v') ? pendingGps : null;
+    setStatusObj(code, pendingStatus, note, gpsToSave);
     if (pendingStatus==='v') setVisited(code, true);
     const labels = {v:'✅ เยี่ยมแล้ว',c:'❌ ปิดร้าน',nf:'⚠️ ไม่พบเจ้าของ',rs:'📅 นัดใหม่'};
-    toast(labels[pendingStatus]+' บันทึกแล้ว');
+    var gpsNote = (pendingStatus==='v' && pendingGps && pendingGps.dist) ? ' (GPS '+pendingGps.dist+'ม.'+(pendingGps.override?' ⚠️':'')+')' : '';
+    toast(labels[pendingStatus]+gpsNote+' บันทึกแล้ว');
+    pendingGps = null;
     closeModal('quickModal');
     updateProgress();
     renderList();
@@ -2410,6 +2464,15 @@ function openReport() {
       txt += '• '+item.s.name+' ('+item.s.code+')\n';
       const note = (item.so&&item.so.note) ? item.so.note : getNote(item.s.code);
       if (note) txt += '  📝 '+note+'\n';
+      if (item.so && item.so.gps) {
+        var gps = item.so.gps;
+        var tsStr = '';
+        if (item.so.ts) {
+          var d = new Date(item.so.ts);
+          tsStr = ' '+d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+' น.';
+        }
+        txt += '  📍 GPS ห่าง '+gps.dist+'ม.'+tsStr+(gps.override?' ⚠️บันทึกนอกระยะ':'')+'\n';
+      }
     });
   }
   addDetail(cats.v,'✅ เยี่ยมแล้ว:');
