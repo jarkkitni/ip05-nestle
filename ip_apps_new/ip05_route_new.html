@@ -211,6 +211,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 /* TOAST */
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;white-space:nowrap}
 .toast.show{opacity:1}
+.undo-toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:10px 14px 10px 18px;border-radius:20px;font-size:13px;font-weight:600;z-index:1000;opacity:0;pointer-events:none;transition:opacity .3s;display:flex;align-items:center;gap:10px;white-space:nowrap}
+.undo-toast.show{opacity:1;pointer-events:auto}
+.undo-bar-wrap{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);z-index:1001;pointer-events:none;opacity:0;transition:opacity .3s}
+.undo-bar-wrap.show{opacity:1}
+.undo-bar{height:3px;background:#ea580c;border-radius:2px;width:100%;transform-origin:left;animation:undoShrink 5s linear forwards}
+@keyframes undoShrink{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+.undo-btn{background:#ea580c;color:#fff;border:none;border-radius:12px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
 /* empty */
 .empty{text-align:center;padding:40px 20px;color:var(--sub)}
 .empty-icon{font-size:48px;margin-bottom:12px}
@@ -285,6 +292,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+<div class="undo-toast" id="undoToast"><span id="undoMsg"></span><button class="undo-btn" id="undoBtn">↩ ยกเลิก</button></div>
+<div class="undo-bar-wrap" id="undoBarWrap"><div class="undo-bar" id="undoBar"></div></div>
 
 <!-- MODALS -->
 <!-- Quick Action -->
@@ -1916,12 +1925,16 @@ function openQuick(code) {
     setStatusObj(code, pendingStatus, note, gpsToSave);
     if (pendingStatus==='v') setVisited(code, true);
     const labels = {v:'✅ เยี่ยมแล้ว',c:'❌ ปิดร้าน',nf:'⚠️ ไม่พบเจ้าของ',rs:'📅 นัดใหม่'};
-    var gpsNote = (pendingStatus==='v' && pendingGps && pendingGps.dist) ? ' (GPS '+pendingGps.dist+'ม.'+(pendingGps.override?' ⚠️':'')+')' : '';
-    toast(labels[pendingStatus]+gpsNote+' บันทึกแล้ว');
+    var gpsNote = (pendingStatus==='v' && pendingGps && pendingGps.dist) ? ' · GPS '+pendingGps.dist+'ม.'+(pendingGps.override?' ⚠️':'') : '';
     pendingGps = null;
     closeModal('quickModal');
     updateProgress();
     renderList();
+    if (pendingStatus==='v') {
+      showUndoToast(code, labels['v']+gpsNote);
+    } else {
+      toast(labels[pendingStatus]+' บันทึกแล้ว');
+    }
   };
   document.getElementById('qaDetail').onclick = function(){
     closeModal('quickModal');
@@ -2523,6 +2536,42 @@ function toast(msg) {
   t.textContent=msg;t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+let undoTimer, undoPendingCode;
+function showUndoToast(code, msg) {
+  undoPendingCode = code;
+  clearTimeout(undoTimer);
+  var el = document.getElementById('undoToast');
+  var bar = document.getElementById('undoBarWrap');
+  document.getElementById('undoMsg').textContent = msg;
+  // reset bar animation
+  var barEl = document.getElementById('undoBar');
+  barEl.style.animation = 'none';
+  barEl.offsetHeight; // reflow
+  barEl.style.animation = '';
+  // calc bar width to match toast width
+  el.classList.add('show');
+  bar.classList.add('show');
+  bar.style.width = el.offsetWidth + 'px';
+  undoTimer = setTimeout(function() {
+    el.classList.remove('show');
+    bar.classList.remove('show');
+    undoPendingCode = null;
+  }, 5000);
+  document.getElementById('undoBtn').onclick = function() {
+    clearTimeout(undoTimer);
+    el.classList.remove('show');
+    bar.classList.remove('show');
+    if (undoPendingCode) {
+      localStorage.removeItem(statusKey(undoPendingCode));
+      setVisited(undoPendingCode, false);
+      undoPendingCode = null;
+      toast('↩ ยกเลิกการบันทึกแล้ว');
+      updateProgress();
+      renderList();
+    }
+  };
 }
 
 // ── init ─────────────────────────────────────────────────
