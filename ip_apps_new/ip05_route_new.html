@@ -10,6 +10,7 @@
 <title>แผนเยี่ยม IP05 — เนสท์เล่</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{--c:#3b82f6;--cf:#1e3a5f;--bg:#0f172a;--card:#1e293b;--text:#e2e8f0;--sub:#64748b;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444;--radius:14px;--shadow:0 1px 4px rgba(0,0,0,.5);--border:#334155}
@@ -297,6 +298,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
   <button class="bb-btn secondary" onclick="openQR()"><span class="icon">💳</span>QR จ่าย</button>
   <button class="bb-btn secondary" onclick="openContacts()"><span class="icon">📞</span>ทีมงาน</button>
   <button class="bb-btn ok" onclick="locateMe()"><span class="icon">📍</span>ตำแหน่งฉัน</button>
+  <button class="bb-btn" style="background:#065f46;color:#6ee7b7" onclick="exportExcel()"><span class="icon">📊</span>Export XLS</button>
 </div>
 
 <!-- TOAST -->
@@ -2735,6 +2737,105 @@ function openMyMapsAndDismiss() {
 function skipWelcome() {
   localStorage.setItem('myMapsOpened', '1');
   document.getElementById('welcomeModal').style.display = 'none';
+}
+
+// ── Export to Excel ───────────────────────────────────────────────────────
+function exportExcel() {
+  if (typeof XLSX === 'undefined') { toast('⚠️ โหลด SheetJS ไม่ได้ กรุณาเชื่อมต่ออินเทอร์เน็ต'); return; }
+  toast('⏳ กำลังสร้างไฟล์ Excel...');
+  var STATUS_LABEL = {v:'เยี่ยมแล้ว', c:'ยืนยันนัด', nf:'ไม่พบร้าน', rs:'เลื่อนนัด', '':'ยังไม่เข้า'};
+  var DAYS = ['จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์'];
+  var wb = XLSX.utils.book_new();
+
+  // Sheet 1: สรุปรายวัน
+  var dayStat = {};
+  DAYS.forEach(function(d){ dayStat[d]={total:0,v:0,c:0,nf:0,rs:0,none:0}; });
+  STORES.forEach(function(s){
+    var so = getStatusObj(s.code);
+    var vis = isVisited(s.code);
+    var st = so ? so.s : (vis ? 'v' : 'none');
+    var d = s.day;
+    if (dayStat[d]) { dayStat[d].total++; dayStat[d][st]=(dayStat[d][st]||0)+1; }
+  });
+  var s1 = [['วัน','ร้านทั้งหมด','✅ เยี่ยมแล้ว','🔵 ยืนยันนัด','❌ ไม่พบ','🔶 เลื่อน','⬜ ยังไม่เข้า','% คืบหน้า']];
+  var tot = {total:0,v:0,c:0,nf:0,rs:0,none:0};
+  DAYS.forEach(function(d){
+    var st = dayStat[d];
+    var pct = st.total ? Math.round((st.v+st.c)/st.total*100)+'%' : '0%';
+    s1.push([d, st.total, st.v, st.c, st.nf, st.rs, st.none, pct]);
+    tot.total+=st.total; tot.v+=st.v; tot.c+=st.c; tot.nf+=st.nf; tot.rs+=st.rs; tot.none+=st.none;
+  });
+  s1.push(['รวม', tot.total, tot.v, tot.c, tot.nf, tot.rs, tot.none,
+    tot.total ? Math.round((tot.v+tot.c)/tot.total*100)+'%' : '0%']);
+  var ws1 = XLSX.utils.aoa_to_sheet(s1);
+  ws1['!cols'] = [{wch:10},{wch:12},{wch:13},{wch:13},{wch:11},{wch:11},{wch:13},{wch:11}];
+  XLSX.utils.book_append_sheet(wb, ws1, '1.สรุปรายวัน');
+
+  // Sheet 2: รายชื่อร้านค้า + สถานะ
+  var s2 = [['รหัสร้าน','ชื่อร้าน','วันเยี่ยม','ช่องทาง','สถานะ','หมายเหตุ','เวลาอัปเดต']];
+  STORES.forEach(function(s){
+    var so = getStatusObj(s.code);
+    var vis = isVisited(s.code);
+    var stKey = so ? so.s : (vis ? 'v' : '');
+    var stLabel = STATUS_LABEL[stKey] || 'ยังไม่เข้า';
+    var note = so ? (so.note||'') : (getNote(s.code)||'');
+    var ts = so && so.ts ? new Date(so.ts).toLocaleString('th-TH') : '';
+    var ch = (s.cat.match(/-(\w+)-/) || ['',''])[1];
+    s2.push([s.code, s.name, s.day, ch, stLabel, note, ts]);
+  });
+  var ws2 = XLSX.utils.aoa_to_sheet(s2);
+  ws2['!cols'] = [{wch:12},{wch:26},{wch:10},{wch:8},{wch:14},{wch:24},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, ws2, '2.รายชื่อร้านค้า');
+
+  // Sheet 3: ออเดอร์รายร้าน
+  var s3 = [['รหัสร้าน','ชื่อร้าน','วันเยี่ยม','สินค้า','หมวด','จำนวน(CS)','ราคา/CS','ยอดรวม(บาท)']];
+  var grandVal = 0;
+  STORES.forEach(function(s){
+    var ord = getOrder(s.code);
+    NESTLE_PRODUCTS.forEach(function(p){
+      var qty = ord[p.id]||0;
+      if (qty > 0) {
+        var val = (p.price||0)*qty;
+        grandVal += val;
+        s3.push([s.code, s.name, s.day, p.name, p.cat, qty, p.price||0, val]);
+      }
+    });
+  });
+  if (s3.length === 1) s3.push(['','(ยังไม่มีออเดอร์)','','','','','','']);
+  else s3.push(['','','','','','','ยอดรวมทั้งหมด', grandVal]);
+  var ws3 = XLSX.utils.aoa_to_sheet(s3);
+  ws3['!cols'] = [{wch:12},{wch:22},{wch:10},{wch:24},{wch:14},{wch:11},{wch:11},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws3, '3.ออเดอร์รายร้าน');
+
+  // Sheet 4: สรุปหมวดสินค้า
+  var catMap = {};
+  STORES.forEach(function(s){
+    var ord = getOrder(s.code);
+    NESTLE_PRODUCTS.forEach(function(p){
+      var qty = ord[p.id]||0;
+      if (qty > 0) {
+        if (!catMap[p.cat]) catMap[p.cat] = {qty:0,val:0};
+        catMap[p.cat].qty += qty;
+        catMap[p.cat].val += (p.price||0)*qty;
+      }
+    });
+  });
+  var s4 = [['หมวดสินค้า','จำนวนรวม (CS)','ยอดรวม (บาท)']];
+  var cats = Object.keys(catMap).sort(function(a,b){ return catMap[b].val-catMap[a].val; });
+  cats.forEach(function(c){ s4.push([c, catMap[c].qty, catMap[c].val]); });
+  var gq = cats.reduce(function(a,c){ return a+catMap[c].qty; },0);
+  var gv = cats.reduce(function(a,c){ return a+catMap[c].val; },0);
+  s4.push(['รวมทั้งหมด', gq, gv]);
+  var ws4 = XLSX.utils.aoa_to_sheet(s4);
+  ws4['!cols'] = [{wch:28},{wch:16},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws4, '4.สรุปหมวดสินค้า');
+
+  // Download
+  var now = new Date();
+  var dateStr = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  var fname = 'IP05_export_'+dateStr+'.xlsx';
+  XLSX.writeFile(wb, fname);
+  setTimeout(function(){ toast('✅ ดาวน์โหลด '+fname+' แล้ว!'); }, 600);
 }
 </script>
 
