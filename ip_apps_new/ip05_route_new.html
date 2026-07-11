@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{--c:#3b82f6;--cf:#1e3a5f;--bg:#0f172a;--card:#1e293b;--text:#e2e8f0;--sub:#64748b;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444;--radius:14px;--shadow:0 1px 4px rgba(0,0,0,.5);--border:#334155}
@@ -92,7 +93,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 .action-btn{border:none;border-radius:12px;padding:13px 8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px}
 .action-btn .icon{font-size:22px}
 .btn-nav{background:#172554;color:#93c5fd}
-.btn-waze{background:#451a03;color:#fbbf24}
 .btn-call{background:#064e3b;color:#34d399}
 .btn-checkin{background:#3b82f6;color:#fff}
 .btn-checkin.done{background:#10b981;color:#fff}
@@ -169,7 +169,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 .gps-warn-btns{display:flex;gap:8px;margin-top:10px}
 .gps-warn-override{flex:1;background:#dc2626;color:#fff;border:none;border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer}
 .gps-warn-cancel{flex:1;background:#334155;color:#e2e8f0;border:none;border-radius:8px;padding:9px;font-size:12px;cursor:pointer}
-.qa-btn.waze{background:#451a03;color:#fbbf24;grid-column:1/-1}
 .qa-detail-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;padding-top:10px;border-top:1px solid #334155}
 .qa-small-btn{border:1.5px solid #334155;background:#0f172a;border-radius:12px;padding:11px 8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;color:#94a3b8}
 .qa-small-btn.ok{background:#064e3b;border-color:#10b981;color:#34d399}
@@ -231,6 +230,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
 /* empty */
 .empty{text-align:center;padding:40px 20px;color:var(--sub)}
 .empty-icon{font-size:48px;margin-bottom:12px}
+
+/* ─── Daily Summary Modal ─── */
+.day-sum-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:8000;display:none;align-items:center;justify-content:center}
+.day-sum-overlay.open{display:flex}
+.day-sum-box{background:#1e293b;border-radius:18px;padding:24px 20px;width:90%;max-width:360px;color:#e2e8f0;box-shadow:0 8px 40px rgba(0,0,0,.6)}
+.day-sum-title{font-size:1.05rem;font-weight:800;margin-bottom:16px;text-align:center}
+.day-sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.day-sum-card{background:#0f172a;border-radius:12px;padding:12px 10px;text-align:center}
+.day-sum-card .val{font-size:1.8rem;font-weight:800}
+.day-sum-card .lbl{font-size:10px;color:#94a3b8;margin-top:2px}
+.day-sum-actions{display:flex;gap:8px}
+.day-sum-actions button{flex:1;padding:10px;border:none;border-radius:10px;font-size:0.9rem;font-weight:700;cursor:pointer}
+.dsm-line{background:#00c300;color:#fff}
+.dsm-close{background:#334155;color:#e2e8f0}
+.progress-wrap{cursor:pointer}
 </style>
 </head>
 <body>
@@ -247,9 +261,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
       <button class="tb-btn" onclick="openReport()">📊 รายงาน</button>
       <button class="tb-btn" onclick="openCoordExport()">📤 พิกัด</button>
       <button class="tb-btn" onclick="toggleMap()">🗺 แผนที่</button>
+    
+      <button class="tb-btn" style="background:#00c300;color:#fff" onclick="openDailySummary()">📊 วันนี้</button>
     </div>
   </div>
-  <div class="progress-wrap">
+  <div class="progress-wrap" onclick="openDailySummary()" title="กดเพื่อดูสรุปวันนี้">
     <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar" style="width:0%"></div></div>
     <div class="progress-label"><span>เยี่ยมแล้ว <span id="visitedCount">0</span> ร้าน</span><span id="pctLabel">0%</span></div>
   </div>
@@ -299,6 +315,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Sarabun',sans-serif;backgroun
   <button class="bb-btn secondary" onclick="openContacts()"><span class="icon">📞</span>ทีมงาน</button>
   <button class="bb-btn ok" onclick="locateMe()"><span class="icon">📍</span>ตำแหน่งฉัน</button>
   <button class="bb-btn" style="background:#065f46;color:#6ee7b7" onclick="exportExcel()"><span class="icon">📊</span>Export XLS</button>
+  <button class="bb-btn" style="background:#4c1d95;color:#c4b5fd;position:relative" onclick="openDriverModal()"><span class="icon">🚚</span>ส่งของ</button>
+  <button class="bb-btn" style="background:#78350f;color:#fde68a;position:relative" onclick="openProspectModal()" id="prospectBtn"><span class="icon">🏫</span>แผนขยาย<span id="prospectBadge" style="display:none;position:absolute;top:-5px;right:-5px;background:#ef4444;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:10px;font-weight:700;line-height:18px;text-align:center;padding:0 3px">0</span></button>
+</div>
+
+<!-- PROSPECT ALERT BANNER -->
+<div id="prospectAlert" style="display:none;position:fixed;top:56px;left:0;right:0;z-index:8500;padding:6px 10px;pointer-events:none">
+  <div style="background:linear-gradient(135deg,#92400e,#78350f);color:#fde68a;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(0,0,0,0.5);pointer-events:all">
+    <span style="font-size:1.3rem">🏫</span>
+    <div style="flex:1;font-size:12px;font-weight:600" id="prospectAlertText">ใกล้โรงเรียน</div>
+    <button onclick="navToNearestProspect()" style="background:#fde68a;color:#78350f;border:none;border-radius:6px;padding:5px 10px;font-weight:700;cursor:pointer;font-size:11px;white-space:nowrap">🗺️ นำทาง</button>
+    <button onclick="document.getElementById('prospectAlert').style.display='none'" style="background:none;border:none;color:#fde68a;font-size:20px;cursor:pointer;line-height:1;padding:0 0 0 4px">✕</button>
+  </div>
 </div>
 
 <!-- TOAST -->
@@ -404,7 +432,7 @@ const IP_NAME = 'ดอยสะเก็ด/สันทราย';
 const IP_COLOR = '#6a1b9a';
 const DAY_COLORS = {'จันทร์':'#1a73e8','อังคาร':'#ea4335','พุธ':'#34a853','พฤหัส':'#f9ab00','ศุกร์':'#fa7b17','เสาร์':'#9334e6','อาทิตย์':'#24c1e0'};
 const MY_MAPS_MID = '1NeB3YO91cClHi3j1Ou_zZN1AJJm4DYs';
-const MY_MAPS_URL = 'https://www.google.com/maps/d/u/0/viewer?mid='+MY_MAPS_MID;
+const MY_MAPS_URL = 'https://www.google.com/maps/d/edit?mid='+MY_MAPS_MID;
 // รหัสร้านที่แก้พิกัดผ่าน script (บันทึกเพื่อแสดงสัญลักษณ์ ⭐)
 const SCRIPT_FIXED_CODES = new Set(['849000584','849000356','849000290','849000564','849000423','849000431']);
 const STORES = [
@@ -612,7 +640,7 @@ const STORES = [
     "code": "849000423",
     "tel": "086-1849710",
     "lat": 18.842054,
-    "lng": 99.059798,
+    "lng": 99.0572231,
     "day": "อังคาร",
     "cat": "ไอศกรีม-TT-ร้านของชำ",
     "area": "ต.สันนาเม็ง อ.สันทราย จ.เชียงใหม่"
@@ -1448,7 +1476,7 @@ const STORES = [
     "code": "849000564",
     "tel": "615710711",
     "lat": 18.834953,
-    "lng": 99.081105,
+    "lng": 99.0785301,
     "day": "เสาร์",
     "cat": "ไอศกรีม-TT-มินิมาร์ท/ร้านสะดวกซื้อ/ร้านค้าในปั๊มน้",
     "area": "ต.ตลาดขวัญ อ.ดอยสะเก็ด จ.เชียงใหม่"
@@ -1608,7 +1636,7 @@ function getPhoto(code) { return localStorage.getItem(photoKey(code)); }
 function savePhoto(code, dataUrl) { localStorage.setItem(photoKey(code), dataUrl); }
 function deletePhoto(code) { localStorage.removeItem(photoKey(code)); }
 
-function locOvKey(code) { return IP_ID+'_loc_'+code; }
+function locOvKey(code) { return IP_ID.toLowerCase()+'_loc_'+code; }
 function getLocOverride(code) { const s=localStorage.getItem(locOvKey(code)); return s?JSON.parse(s):null; }
 function setLocOverride(code,lat,lng,method) { localStorage.setItem(locOvKey(code),JSON.stringify({lat,lng,method,ts:Date.now()})); }
 function clearLocOverride(code) { localStorage.removeItem(locOvKey(code)); }
@@ -1816,7 +1844,8 @@ function locateMe() {
     userLat = pos.coords.latitude;
     userLng = pos.coords.longitude;
     toast('พบตำแหน่งของคุณ ✓');
-    renderList();
+    switchTab('near');
+    setTimeout(checkNearProspects, 500);
     if (mapInited && leafMap) {
       leafMap.setView([userLat,userLng],14);
       L.circleMarker([userLat,userLng],{radius:8,color:'#2563eb',fillOpacity:1}).addTo(leafMap).bindPopup('ตำแหน่งของฉัน').openPopup();
@@ -1854,8 +1883,7 @@ function openQuick(code) {
     + '<button class="qa-btn maps" id="qaMaps"><div class="qb-icon">🗺️</div>Google Maps<div style="font-size:10px;font-weight:500;opacity:.75">นำทาง</div></button>'
     + (s.tel ? '<button class="qa-btn call" id="qaCall"><div class="qb-icon">📞</div>โทรหาร้าน<div style="font-size:10px;font-weight:500;opacity:.75">'+s.tel+'</div></button>' : '<button class="qa-btn call" id="qaCall"><div class="qb-icon">📞</div>โทรหาร้าน<div style="font-size:10px;font-weight:500;opacity:.75">ไม่มีเบอร์</div></button>')
     + '</div>'
-    + '<button class="qa-btn waze" id="qaWaze"><div class="qb-icon">🚗</div>Waze<div style="font-size:10px;font-weight:500;opacity:.75">นำทางด้วย Waze</div></button>'
-    + '<div style="font-size:12px;font-weight:700;color:#6b7280;margin:12px 0 6px">บันทึกสถานะการเยี่ยม:</div>'
++ '<div style="font-size:12px;font-weight:700;color:#6b7280;margin:12px 0 6px">บันทึกสถานะการเยี่ยม:</div>'
     + '<div class="status-grid">'
     + '<button class="status-btn sb-v" id="qaSbV"><div class="si">✅</div>เยี่ยมแล้ว</button>'
     + '<button class="status-btn sb-c" id="qaSbC"><div class="si">❌</div>ปิดร้าน</button>'
@@ -1907,7 +1935,6 @@ function openQuick(code) {
   document.getElementById('qaClose').onclick = function(){ closeModal('quickModal'); };
   document.getElementById('qaMaps').onclick = function(){ navGoogle(lat,lng); };
   document.getElementById('qaCall').onclick = function(){ if(s.tel) window.location='tel:'+s.tel; else navGoogle(lat,lng); };
-  document.getElementById('qaWaze').onclick = function(){ navWaze(lat,lng); };
 document.getElementById('qaSbV').onclick = function(){
     if (!navigator.geolocation) { showGpsWarnPanel(null, null); return; }
     toast('📍 กำลังตรวจสอบตำแหน่ง...');
@@ -1994,7 +2021,6 @@ function openDetail(code) {
     + '</div>'
     + '<div class="action-grid">'
     + '<button class="action-btn btn-nav" id="detNavBtn"><span class="icon">🗺️</span>Google Maps</button>'
-    + '<button class="action-btn btn-waze" id="detWazeBtn"><span class="icon">🚗</span>Waze</button>'
     + '<button class="action-btn btn-sv" id="detSvBtn"><span class="icon">🌆</span>Street View</button>'
     + (s.tel?'<button class="action-btn btn-call" id="detCallBtn"><span class="icon">📞</span>'+s.tel+'</button>':'')
     + '<button class="action-btn btn-checkin '+(vis?'done':'')+'" id="checkinBtn_'+code+'"><span class="icon">'+(vis?'✅':'📲')+'</span>'+(vis?'เช็คอินแล้ว':'เช็คอิน')
@@ -2008,7 +2034,6 @@ function openDetail(code) {
   db.querySelector('#addPhotoBtn').onclick = function(){ openPhotoInput(code); };
   if (db.querySelector('#delPhotoBtn')) db.querySelector('#delPhotoBtn').onclick = function(){ deletePhoto(code); toast('🗑 ลบรูปแล้ว'); openDetail(code); };
   db.querySelector('#detNavBtn').onclick = function(){ navGoogle(_lat,_lng); };
-  db.querySelector('#detWazeBtn').onclick = function(){ navWaze(_lat,_lng); };
   db.querySelector('#detSvBtn').onclick = function(){ openStreetView(_lat,_lng); };
   if (s.tel && db.querySelector('#detCallBtn')) db.querySelector('#detCallBtn').onclick = function(){ window.location='tel:'+s.tel; };
   db.querySelector('#checkinBtn_'+code).onclick = function(){ checkIn(code); };
@@ -2443,6 +2468,9 @@ function checkIn(code) {
     return;
   }
   setVisited(code, true);
+  const gKey = IP_ID.toLowerCase() + '_gps_' + code;
+  localStorage.setItem(gKey, JSON.stringify({lat:userLat,lng:userLng,ts:Date.now()}));
+
   toast('✅ เช็คอินสำเร็จ!');
   const btn = document.getElementById('checkinBtn_'+code);
   if (btn) { btn.textContent='✅ เช็คอินแล้ว'; btn.classList.add('done'); }
@@ -2711,6 +2739,8 @@ function showUndoToast(code, msg) {
 
 // ── init ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
+  // เขียนจำนวนร้านทั้งหมดลง localStorage เพื่อให้ landing page คำนวณ % ความถูกต้อง
+  localStorage.setItem('ip05_total', STORES.length);
   document.getElementById('anomCount').textContent = ANOMALIES_DATA.length||'';
   // auto-set day filter to today
   const day = todayDay();
@@ -2723,21 +2753,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   updateProgress();
 
   // Welcome modal — แสดงครั้งแรกเท่านั้น
-  if (!localStorage.getItem('myMapsOpened')) {
-    document.getElementById('welcomeModal').style.display = 'flex';
+  
+
+  // Auto-open driver modal if launched from landing page with ?driver=1
+  if (location.search.includes('driver=1')) {
+    setTimeout(openDriverModal, 600);
   }
 });
-
-function openMyMapsAndDismiss() {
-  window.open('https://www.google.com/maps/d/u/0/viewer?mid=1NeB3YO91cClHi3j1Ou_zZN1AJJm4DYs&ll=9.585997654097723%2C49.651133999999985&z=4', '_blank');
-  localStorage.setItem('myMapsOpened', '1');
-  document.getElementById('welcomeModal').style.display = 'none';
-}
-
-function skipWelcome() {
-  localStorage.setItem('myMapsOpened', '1');
-  document.getElementById('welcomeModal').style.display = 'none';
-}
 
 // ── Export to Excel ───────────────────────────────────────────────────────
 function exportExcel() {
@@ -2837,36 +2859,881 @@ function exportExcel() {
   XLSX.writeFile(wb, fname);
   setTimeout(function(){ toast('✅ ดาวน์โหลด '+fname+' แล้ว!'); }, 600);
 }
+
+// ── PROSPECT SCHOOLS DATA ──────────────────────────────────────────────────
+var PROSPECT_TARGETS = [
+  {name:'โรงเรียนดอยสะเก็ดวิทยาคม',lat:18.8701,lng:99.1956,district:'ดอยสะเก็ด',type:'school'},
+  {name:'โรงเรียนบ้านเชิงดอย',lat:18.8711,lng:99.1359,district:'ดอยสะเก็ด',type:'school'},
+  {name:'โรงเรียนบ้านป่าป้อง',lat:18.8400,lng:99.1295,district:'ดอยสะเก็ด',type:'school'},
+  {name:'โรงเรียนบ้านตลาดขี้เหล็ก',lat:18.8392,lng:99.2055,district:'ดอยสะเก็ด',type:'school'},
+  {name:'โรงเรียนบ้านป่าไม้แดง',lat:18.8620,lng:99.1450,district:'ดอยสะเก็ด',type:'school'},
+  {name:'โรงเรียนบ้านป่าไผ่',lat:18.8550,lng:99.1600,district:'ดอยสะเก็ด',type:'school'},
+  {name:'โรงเรียนชลประทานผาแตก',lat:18.8800,lng:99.1800,district:'ดอยสะเก็ด',type:'school'},
+  {name:'โรงเรียนบ้านดงเจริญชัย',lat:18.8902,lng:99.1190,district:'ดอยสะเก็ด',type:'school'},
+  {name:'โรงเรียนบ้านสันต้นม่วงเหนือ',lat:18.8163,lng:99.1001,district:'ดอยสะเก็ด',type:'school'},
+  {name:'โรงเรียนบ้านป่าเมือด',lat:18.8015,lng:99.0918,district:'ดอยสะเก็ด',type:'school'},
+  {name:'โรงเรียนบ้านปางแดง',lat:18.9983,lng:99.2784,district:'ดอยสะเก็ด',type:'school'},
+  {name:'โรงเรียนสันทรายวิทยาคม',lat:18.8461,lng:99.0430,district:'สันทราย',type:'school'},
+  {name:'โรงเรียนสันทรายหลวง',lat:18.8504,lng:99.0443,district:'สันทราย',type:'school'},
+  {name:'โรงเรียนวัดสันทรายมูล',lat:18.8185,lng:99.0303,district:'สันทราย',type:'school'},
+  {name:'โรงเรียนบ้านสันทราย',lat:18.8944,lng:99.1344,district:'สันทราย',type:'school'},
+  {name:'โรงเรียนศรีสังวาลย์เชียงใหม่',lat:18.8700,lng:99.0600,district:'สันทราย',type:'school'},
+  {name:'โรงเรียนต้นกล้า',lat:18.8600,lng:99.0500,district:'สันทราย',type:'school'},
+  {name:'โรงเรียนสันกำแพง',lat:18.7394,lng:99.1231,district:'สันกำแพง',type:'school'},
+  {name:'โรงเรียนบ้านสันกำแพง',lat:18.7460,lng:99.1169,district:'สันกำแพง',type:'school'},
+  {name:'โรงเรียนสันกำแพงคันธาอนุสรณ์',lat:18.7536,lng:99.1277,district:'สันกำแพง',type:'school'},
+  {name:'โรงเรียนวัดสันโค้ง',lat:18.7375,lng:99.1396,district:'สันกำแพง',type:'school'},
+  {name:'โรงเรียนวัดทรายมูล',lat:18.7410,lng:99.1291,district:'สันกำแพง',type:'school'},
+  {name:'โรงเรียนบ้านป่าตึงดอยชิว',lat:18.7594,lng:99.1698,district:'สันกำแพง',type:'school'},
+  {name:'โรงเรียนบ้านบวกค้าง',lat:18.7550,lng:99.1500,district:'สันกำแพง',type:'school'},
+  {name:'โรงเรียนแม่ออนวิทยาลัย',lat:18.7472,lng:99.2315,district:'แม่ออน',type:'school'},
+  {name:'โรงเรียนบ้านแม่ออน',lat:18.7600,lng:99.2200,district:'แม่ออน',type:'school'},
+  {name:'โรงเรียนบ้านท่าเดื่อ',lat:18.7350,lng:99.2500,district:'แม่ออน',type:'school'}
+];
+
+var prospectMap = null;
+var prospectMarkers = [];
+var _nearestProspect = null;
+var _prospectFilter = 'all';
+
+function getPStatus(name){ return localStorage.getItem('ip05_ps_'+name)||'prospect'; }
+function setPStatus(name,s){ localStorage.setItem('ip05_ps_'+name,s); }
+
+var STATUS_COLOR = {prospect:'#f59e0b', contacted:'#3b82f6', converted:'#22c55e', rejected:'#6b7280'};
+var STATUS_LABEL_P = {prospect:'🟡 ยังไม่ได้ติดต่อ', contacted:'🔵 ติดต่อแล้ว', converted:'🟢 เปิดได้แล้ว', rejected:'⚫ ปฏิเสธ'};
+
+function openProspectModal() {
+  document.getElementById('prospectModal').classList.add('open');
+  renderProspectList();
+  setTimeout(initProspectMap, 100);
+}
+
+function initProspectMap() {
+  if (!window.L) return;
+  var el = document.getElementById('prospectMap');
+  if (prospectMap) { prospectMap.invalidateSize(); return; }
+  prospectMap = L.map('prospectMap', {zoomControl:true}).setView([18.82, 99.13], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'OSM'}).addTo(prospectMap);
+  // existing stores as blue dots
+  STORES.forEach(function(s){
+    if (!s.lat||!s.lng) return;
+    L.circleMarker([s.lat,s.lng],{radius:4,color:'#3b82f6',fillOpacity:0.7,weight:1}).addTo(prospectMap).bindPopup(s.name);
+  });
+  renderProspectMapMarkers();
+  if (userLat) L.circleMarker([userLat,userLng],{radius:8,color:'#ef4444',fillOpacity:1}).addTo(prospectMap).bindPopup('คุณอยู่ที่นี่');
+}
+
+function renderProspectMapMarkers() {
+  if (!prospectMap) return;
+  prospectMarkers.forEach(function(m){ m.remove(); });
+  prospectMarkers = [];
+  PROSPECT_TARGETS.forEach(function(p){
+    var st = getPStatus(p.name);
+    if (_prospectFilter !== 'all' && st !== _prospectFilter) return;
+    var col = STATUS_COLOR[st]||'#f59e0b';
+    var m = L.circleMarker([p.lat,p.lng],{radius:9,color:col,fillColor:col,fillOpacity:0.9,weight:2})
+      .addTo(prospectMap)
+      .bindPopup('<b>'+p.name+'</b><br>'+p.district+'<br>'+STATUS_LABEL_P[st]);
+    prospectMarkers.push(m);
+  });
+}
+
+function renderProspectList() {
+  var list = PROSPECT_TARGETS.slice();
+  if (userLat) {
+    list.forEach(function(p){ p._d = distKm(userLat,userLng,p.lat,p.lng); });
+    list.sort(function(a,b){ return a._d-b._d; });
+  }
+  var counts = {prospect:0,contacted:0,converted:0,rejected:0};
+  var nearCount = 0;
+  list.forEach(function(p){
+    var st = getPStatus(p.name);
+    counts[st]=(counts[st]||0)+1;
+    if (p._d && p._d < 0.5) nearCount++;
+  });
+  document.getElementById('pKpiTotal').textContent = list.length;
+  document.getElementById('pKpiContacted').textContent = counts.contacted||0;
+  document.getElementById('pKpiConverted').textContent = counts.converted||0;
+  document.getElementById('pKpiNear').textContent = nearCount;
+
+  if (_prospectFilter !== 'all') list = list.filter(function(p){ return getPStatus(p.name)===_prospectFilter; });
+
+  var html = '';
+  list.forEach(function(p){
+    var st = getPStatus(p.name);
+    var col = STATUS_COLOR[st]||'#f59e0b';
+    var dTxt = p._d ? (p._d<1?(p._d*1000|0)+'ม.':p._d.toFixed(1)+'กม.') : '';
+    var near = p._d && p._d < 0.5 ? '<span style="background:#ef4444;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px">ใกล้คุณ!</span>' : '';
+    html += '<div style="background:#1e293b;border:1px solid '+col+';border-radius:10px;padding:10px 12px">'
+      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
+      + '<span style="width:10px;height:10px;border-radius:50%;background:'+col+';flex-shrink:0"></span>'
+      + '<span style="font-weight:700;color:#e2e8f0;font-size:13px;flex:1">'+p.name+'</span>'
+      + near
+      + '</div>'
+      + '<div style="display:flex;align-items:center;justify-content:space-between">'
+      + '<div style="color:#64748b;font-size:11px">'+p.district+(dTxt?' · 📍'+dTxt:'')+'</div>'
+      + '<div style="display:flex;gap:4px">'
+      + '<button onclick="window.open(\'https://maps.google.com/?q='+p.lat+','+p.lng+'\',\'_blank\')" style="background:#1e3a5f;color:#60a5fa;border:none;border-radius:6px;padding:4px 7px;font-size:10px;cursor:pointer">🗺️</button>'
+      + '<select onchange="setPStatusAndRefresh(\''+p.name+'\',this.value)" style="background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:3px 4px;font-size:10px;cursor:pointer">'
+      + ['prospect','contacted','converted','rejected'].map(function(v){ return '<option value="'+v+'"'+(st===v?' selected':'')+'>'+STATUS_LABEL_P[v]+'</option>'; }).join('')
+      + '</select></div></div></div>';
+  });
+  document.getElementById('prospectList').innerHTML = html || '<div style="text-align:center;color:#64748b;padding:20px">ไม่มีรายการ</div>';
+  updateProspectBadge();
+}
+
+function setPStatusAndRefresh(name, val) {
+  setPStatus(name, val);
+  renderProspectList();
+  renderProspectMapMarkers();
+}
+
+function filterProspects(f) {
+  _prospectFilter = f;
+  ['all','prospect','contacted','converted'].forEach(function(k){
+    var btn = document.getElementById('pf-'+k);
+    if (btn) btn.style.background = k===f ? '#3b82f6' : '#334155';
+    if (btn) btn.style.color = k===f ? '#fff' : '#94a3b8';
+  });
+  renderProspectList();
+  renderProspectMapMarkers();
+}
+
+function updateProspectBadge() {
+  var badge = document.getElementById('prospectBadge');
+  if (!badge) return;
+  var near = PROSPECT_TARGETS.filter(function(p){
+    if (!userLat) return false;
+    return distKm(userLat,userLng,p.lat,p.lng) < 0.5;
+  });
+  if (near.length > 0) {
+    badge.textContent = near.length;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function checkNearProspects() {
+  if (!userLat) return;
+  var nearby = PROSPECT_TARGETS.filter(function(p){
+    var st = getPStatus(p.name);
+    return st !== 'converted' && st !== 'rejected' && distKm(userLat,userLng,p.lat,p.lng) < 0.5;
+  });
+  nearby.sort(function(a,b){ return distKm(userLat,userLng,a.lat,a.lng)-distKm(userLat,userLng,b.lat,b.lng); });
+  updateProspectBadge();
+  if (nearby.length === 0) { document.getElementById('prospectAlert').style.display='none'; return; }
+  var p = nearby[0];
+  var d = distKm(userLat,userLng,p.lat,p.lng);
+  var dTxt = d<1?(d*1000|0)+'ม.':d.toFixed(1)+'กม.';
+  _nearestProspect = p;
+  document.getElementById('prospectAlertText').innerHTML = '<b>'+p.name+'</b><br><span style="font-size:10px;opacity:.8">ห่าง '+dTxt+' · '+p.district+' · ยังไม่ได้เปิดลูกค้า</span>';
+  document.getElementById('prospectAlert').style.display = 'block';
+}
+
+function navToNearestProspect() {
+  if (!_nearestProspect) return;
+  window.open('https://maps.google.com/?daddr='+_nearestProspect.lat+','+_nearestProspect.lng,'_blank');
+}
+
+// ============================================================
+// DRIVER DELIVERY FEATURE
+// ============================================================
+var _driverData = null; // { date, headers, rows: [{store, items:[{name,qty}]}] }
+var _driverDoneKey = 'ip05_driver_done_'; // + date + '_' + code
+
+function openDriverModal() {
+  openModal('driverModal');
+  // Restore previously loaded data from localStorage
+  var saved = localStorage.getItem('ip05_driver_data');
+  if (saved) {
+    try {
+      _driverData = JSON.parse(saved);
+      renderDriverList();
+    } catch(e) { _driverData = null; }
+  }
+}
+
+function handleDriverExcel(input) {
+  var file = input.files[0];
+  if (!file) return;
+  document.getElementById('driverFileName').textContent = file.name;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, {type:'binary'});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      if (!raw || raw.length < 2) { toast('ไฟล์ Excel ว่างเปล่าหรือรูปแบบผิด'); return; }
+
+      var headers = raw[0]; // First row = headers
+      var codeCol = -1;
+      // Find which column is the store code (ค้นหาคอลัมน์รหัสร้าน)
+      for (var i = 0; i < headers.length; i++) {
+        var h = String(headers[i]).trim().toLowerCase();
+        if (h === 'รหัสร้าน' || h === 'code' || h === 'รหัส' || h === 'storecode' || h === 'store_code' || h === 'store code') {
+          codeCol = i; break;
+        }
+      }
+      if (codeCol === -1) codeCol = 0; // default: first column = code
+
+      // Product headers (all columns except code column)
+      var productHeaders = [];
+      for (var j = 0; j < headers.length; j++) {
+        if (j !== codeCol) productHeaders.push({ idx: j, name: String(headers[j]).trim() || ('คอลัมน์'+(j+1)) });
+      }
+
+      var rows = [];
+      var today = new Date().toLocaleDateString('th-TH');
+      for (var r = 1; r < raw.length; r++) {
+        var row = raw[r];
+        var code = String(row[codeCol] || '').trim();
+        if (!code) continue;
+
+        // Match to STORES array
+        var storeObj = null;
+        for (var s = 0; s < STORES.length; s++) {
+          if (String(STORES[s].code).trim().toUpperCase() === code.toUpperCase()) {
+            storeObj = STORES[s]; break;
+          }
+        }
+
+        // Collect non-zero product quantities
+        var items = [];
+        var totalQty = 0;
+        for (var p = 0; p < productHeaders.length; p++) {
+          var qty = parseFloat(row[productHeaders[p].idx]) || 0;
+          if (qty > 0) { items.push({ name: productHeaders[p].name, qty: qty }); totalQty += qty; }
+        }
+        if (items.length === 0 && !storeObj) continue; // skip empty rows with unknown code
+
+        rows.push({
+          code: code,
+          storeName: storeObj ? storeObj.name : ('รหัส '+code+' (ไม่พบในระบบ)'),
+          address: storeObj ? (storeObj.address || storeObj.area || '') : '',
+          lat: storeObj ? storeObj.lat : null,
+          lng: storeObj ? storeObj.lng : null,
+          inSystem: !!storeObj,
+          items: items,
+          totalQty: totalQty
+        });
+      }
+
+      if (rows.length === 0) { toast('ไม่พบร้านที่มีสินค้าส่ง'); return; }
+
+      _driverData = { date: today, headers: productHeaders.map(function(h){return h.name;}), rows: rows };
+      localStorage.setItem('ip05_driver_data', JSON.stringify(_driverData));
+      renderDriverList();
+      toast('โหลดข้อมูลส่งของ '+rows.length+' ร้าน ✓');
+    } catch(ex) {
+      toast('ไม่สามารถอ่านไฟล์ได้: '+ex.message);
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function getDriverDoneKey(code) {
+  if (!_driverData) return null;
+  return _driverDoneKey + _driverData.date.replace(/\//g,'-') + '_' + code;
+}
+
+function toggleDriverDone(code) {
+  var key = getDriverDoneKey(code);
+  if (!key) return;
+  var done = localStorage.getItem(key) === '1';
+  localStorage.setItem(key, done ? '0' : '1');
+  renderDriverList();
+}
+
+function renderDriverList() {
+  if (!_driverData) return;
+  var rows = _driverData.rows;
+  var doneCount = 0;
+  var skuCount = 0;
+  var html = '';
+
+  rows.forEach(function(r) {
+    var key = getDriverDoneKey(r.code);
+    var isDone = key ? localStorage.getItem(key) === '1' : false;
+    if (isDone) doneCount++;
+    r.items.forEach(function(it) { skuCount += it.qty; });
+
+    var itemsHtml = r.items.length > 0
+      ? r.items.map(function(it){ return '<span style="background:#1e3a5f;color:#93c5fd;border-radius:6px;padding:3px 8px;font-size:11px;white-space:nowrap">'+it.name+' <strong>×'+it.qty+'</strong></span>'; }).join(' ')
+      : '<span style="color:#64748b;font-size:11px">ไม่มีสินค้า</span>';
+
+    var navBtn = (r.lat && r.lng)
+      ? '<button onclick="window.open(\'https://www.google.com/maps/dir/?api=1&destination='+r.lat+','+r.lng+'&travelmode=driving\',\'_blank\')" style="background:#1e3a5f;color:#60a5fa;border:none;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;flex-shrink:0">🗺️ นำทาง</button>'
+      : '';
+
+    html += '<div style="background:'+(isDone?'#052e16':'#1e293b')+';border:1px solid '+(isDone?'#166534':'#334155')+';border-radius:12px;padding:10px 12px;transition:background .3s">';
+    html += '<div style="display:flex;align-items:flex-start;gap:8px">';
+    html += '<input type="checkbox" '+(isDone?'checked':'')+' onchange="toggleDriverDone(\''+r.code+'\')" style="width:18px;height:18px;margin-top:2px;cursor:pointer;accent-color:#4ade80;flex-shrink:0">';
+    html += '<div style="flex:1;min-width:0">';
+    html += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">';
+    html += '<span style="background:#4c1d95;color:#c4b5fd;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700">'+r.code+'</span>';
+    html += (r.inSystem ? '' : '<span style="background:#450a0a;color:#fca5a5;border-radius:6px;padding:2px 8px;font-size:9px">⚠️ ไม่พบในระบบ</span>');
+    if (isDone) html += '<span style="color:#4ade80;font-size:11px;font-weight:700">✓ ส่งแล้ว</span>';
+    html += '</div>';
+    html += '<div style="font-size:13px;font-weight:700;color:'+(isDone?'#6ee7b7':'#e2e8f0')+';margin:4px 0;'+(isDone?'text-decoration:line-through opacity:.7':'')+'">'+r.storeName+'</div>';
+    if (r.address) html += '<div style="font-size:11px;color:#64748b;margin-bottom:6px">📍 '+r.address+'</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">'+itemsHtml+'</div>';
+    html += '</div>';
+    html += navBtn;
+    html += '</div>';
+    html += '</div>';
+  });
+
+  document.getElementById('driverList').innerHTML = html;
+
+  // Update KPI
+  document.getElementById('dKpiStores').textContent = rows.length;
+  document.getElementById('dKpiDone').textContent = doneCount;
+  document.getElementById('dKpiSkus').textContent = Math.round(skuCount);
+  document.getElementById('dKpiDate').textContent = _driverData.date;
+  document.getElementById('driverKpiBar').style.display = 'block';
+
+  var actEl = document.getElementById('driverActions');
+  actEl.style.display = 'flex';
+}
+
+function clearDriverData() {
+  if (!confirm('ล้างข้อมูลส่งของ?')) return;
+  _driverData = null;
+  localStorage.removeItem('ip05_driver_data');
+  document.getElementById('driverFileName').textContent = 'ยังไม่ได้เลือกไฟล์';
+  document.getElementById('driverKpiBar').style.display = 'none';
+  document.getElementById('driverActions').style.display = 'none';
+  document.getElementById('driverList').innerHTML = '<div style="text-align:center;padding:40px 20px;color:#475569"><div style="font-size:2rem;margin-bottom:8px">🚚</div><div style="font-size:13px">อัปโหลด Excel เพื่อดูรายการส่งของ</div></div>';
+  document.getElementById('driverFileInput').value = '';
+  toast('ล้างข้อมูลแล้ว');
+}
+
+function copyDriverLine() {
+  if (!_driverData) return;
+  var rows = _driverData.rows;
+  var date = _driverData.date;
+  var lines = ['🚚 รายการส่งของ IP05 — '+date, ''];
+  var doneCount = 0;
+  rows.forEach(function(r, i) {
+    var key = getDriverDoneKey(r.code);
+    var isDone = key ? localStorage.getItem(key) === '1' : false;
+    if (isDone) doneCount++;
+    var check = isDone ? '✅' : '⬜';
+    lines.push(check+' '+(i+1)+'. ['+r.code+'] '+r.storeName);
+    r.items.forEach(function(it){ lines.push('   • '+it.name+' ×'+it.qty); });
+  });
+  lines.push('');
+  lines.push('✅ ส่งแล้ว '+doneCount+'/'+rows.length+' ร้าน');
+  var text = lines.join('\n');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function(){ toast('คัดลอกข้อความแล้ว ✓'); });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    toast('คัดลอกข้อความแล้ว ✓');
+  }
+}
+
+function downloadDriverHTML() {
+  if (!_driverData) return;
+  var rows = _driverData.rows;
+  var date = _driverData.date;
+  var storeRows = rows.map(function(r, i) {
+    var itemsList = r.items.map(function(it){ return '<li>'+it.name+' &times;<strong>'+it.qty+'</strong></li>'; }).join('');
+    var navLink = (r.lat && r.lng) ? '<a href="https://www.google.com/maps/dir/?api=1&destination='+r.lat+','+r.lng+'&travelmode=driving" target="_blank" style="background:#1e3a8a;color:#93c5fd;padding:6px 14px;border-radius:8px;text-decoration:none;font-size:13px">🗺️ นำทาง</a>' : '';
+    return '<div class="card" id="c'+i+'">'
+      +'<div class="top"><div><span class="badge">'+r.code+'</span> <strong>'+r.storeName+'</strong>'+(r.address?'<div class="addr">📍 '+r.address+'</div>':'')+'</div>'+navLink+'</div>'
+      +'<ul class="items">'+itemsList+'</ul>'
+      +'<label class="done-lbl"><input type="checkbox" onchange="markDone('+i+',this)"> ส่งแล้ว ✓</label>'
+      +'</div>';
+  }).join('');
+
+  var html = '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>รายการส่งของ IP05 – '+date+'</title>'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:\'Sarabun\',sans-serif;background:#0f172a;color:#e2e8f0;padding:12px}'
+    +'h1{font-size:16px;color:#c4b5fd;margin-bottom:4px}.sub{font-size:12px;color:#64748b;margin-bottom:12px}'
+    +'.progress{background:#1e293b;border-radius:8px;height:8px;margin-bottom:12px}.progress-bar{background:#4ade80;height:8px;border-radius:8px;transition:width .4s}'
+    +'.card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:12px;margin-bottom:10px;transition:background .3s}'
+    +'.card.done{background:#052e16;border-color:#166534;opacity:.7}'
+    +'.top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}'
+    +'.badge{background:#4c1d95;color:#c4b5fd;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700}'
+    +'.addr{font-size:11px;color:#64748b;margin-top:4px}'
+    +'.items{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}'
+    +'.items li{background:#1e3a5f;color:#93c5fd;border-radius:6px;padding:3px 10px;font-size:12px}'
+    +'.done-lbl{display:flex;align-items:center;gap:6px;font-size:13px;color:#94a3b8;cursor:pointer}'
+    +'.done-lbl input{width:18px;height:18px;accent-color:#4ade80}'
+    +'a{display:inline-block}</style></head>'
+    +'<body><h1>🚚 รายการส่งของ IP05</h1><div class="sub">วันที่ '+date+' — '+rows.length+' ร้าน</div>'
+    +'<div class="progress"><div class="progress-bar" id="pbar" style="width:0%"></div></div>'
+    +'<div id="status" style="font-size:12px;color:#94a3b8;margin-bottom:12px">ส่งแล้ว 0/'+rows.length+' ร้าน</div>'
+    +storeRows
+    +'<script>var done=Array('+rows.length+').fill(false);function markDone(i,cb){done[i]=cb.checked;document.getElementById("c"+i).className="card"+(done[i]?" done":"");var n=done.filter(Boolean).length;document.getElementById("pbar").style.width=(n/'+rows.length+'*100)+"%";document.getElementById("status").textContent="ส่งแล้ว "+n+"/'+rows.length+' ร้าน";}<\/script>'
+
++'</body></html>';
+  var blob = new Blob([html], {type:'text/html'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ip05-delivery-' + date + '.html';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
 </script>
 
-<!-- Order Modal -->
-<div class="modal" id="orderModal">
-  <div class="sheet">
+<!-- PROSPECT MODAL -->
+<div class="modal" id="prospectModal">
+  <div class="sheet" style="max-height:95vh">
     <div class="sheet-header">
-      <div class="sheet-title">🛒 สั่งซื้อสินค้า</div>
-      <button class="sheet-close" onclick="closeModal('orderModal')">✕</button>
+      <div class="sheet-title">🏫 แผนขยายร้านค้า & โรงเรียน</div>
+      <button class="sheet-close" onclick="closeModal('prospectModal')">✕</button>
     </div>
-    <div class="sheet-body" id="orderBody"></div>
+    <div class="sheet-body" style="padding:0;display:flex;flex-direction:column;gap:0">
+      <!-- KPI strip -->
+      <div style="display:flex;gap:0;border-bottom:1px solid #334155">
+        <div style="flex:1;text-align:center;padding:10px 4px;border-right:1px solid #334155">
+          <div id="pKpiTotal" style="font-size:1.4rem;font-weight:800;color:#fde68a">0</div>
+          <div style="font-size:10px;color:#94a3b8">เป้าหมายทั้งหมด</div>
+        </div>
+        <div style="flex:1;text-align:center;padding:10px 4px;border-right:1px solid #334155">
+          <div id="pKpiContacted" style="font-size:1.4rem;font-weight:800;color:#60a5fa">0</div>
+          <div style="font-size:10px;color:#94a3b8">ติดต่อแล้ว</div>
+        </div>
+        <div style="flex:1;text-align:center;padding:10px 4px;border-right:1px solid #334155">
+          <div id="pKpiConverted" style="font-size:1.4rem;font-weight:800;color:#4ade80">0</div>
+          <div style="font-size:10px;color:#94a3b8">เปิดได้แล้ว</div>
+        </div>
+        <div style="flex:1;text-align:center;padding:10px 4px">
+          <div id="pKpiNear" style="font-size:1.4rem;font-weight:800;color:#fb923c">0</div>
+          <div style="font-size:10px;color:#94a3b8">ใกล้คุณ</div>
+        </div>
+      </div>
+      <!-- Map -->
+      <div id="prospectMap" style="height:240px;width:100%;background:#1e293b;flex-shrink:0"></div>
+      <!-- Filter tabs -->
+      <div style="display:flex;gap:6px;padding:8px 12px;background:#1e293b;border-bottom:1px solid #334155;overflow-x:auto">
+        <button onclick="filterProspects('all')" id="pf-all" style="background:#3b82f6;color:#fff;border:none;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">ทั้งหมด</button>
+        <button onclick="filterProspects('prospect')" id="pf-prospect" style="background:#334155;color:#94a3b8;border:none;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🟡 ยังไม่ได้ติดต่อ</button>
+        <button onclick="filterProspects('contacted')" id="pf-contacted" style="background:#334155;color:#94a3b8;border:none;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🔵 ติดต่อแล้ว</button>
+        <button onclick="filterProspects('converted')" id="pf-converted" style="background:#334155;color:#94a3b8;border:none;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">🟢 เปิดได้แล้ว</button>
+      </div>
+      <!-- List -->
+      <div id="prospectList" style="overflow-y:auto;flex:1;padding:8px 12px;display:flex;flex-direction:column;gap:6px"></div>
+    </div>
   </div>
 </div>
 
-<!-- Welcome Modal -->
-<div id="welcomeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:12px;padding:28px 24px;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
-    <div style="font-size:2.2rem;margin-bottom:8px;">🗺️</div>
-    <div style="font-size:1.1rem;font-weight:700;color:#1a3c5e;margin-bottom:8px;">ก่อนใช้งานแอป</div>
-    <div style="font-size:0.9rem;color:#444;line-height:1.6;margin-bottom:20px;">
-      กรุณากด <strong>"เปิด Google My Maps"</strong> ก่อน 1 ครั้ง<br>
-      เพื่อให้แผนที่สีๆ แสดงผลได้ถูกต้อง
+<!-- DRIVER DELIVERY MODAL -->
+<div class="modal" id="driverModal">
+  <div class="sheet" style="max-height:95vh">
+    <div class="sheet-header">
+      <div class="sheet-title">🚚 ส่งของ — รายการส่งประจำวัน</div>
+      <button class="sheet-close" onclick="closeModal('driverModal')">✕</button>
     </div>
-    <button onclick="openMyMapsAndDismiss()" style="width:100%;padding:14px;background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:10px;">
-      🗺️ เปิด Google My Maps
-    </button>
-    <button onclick="skipWelcome()" style="width:100%;padding:10px;background:#f0f0f0;color:#666;border:none;border-radius:8px;font-size:0.85rem;cursor:pointer;">
-      เคยเปิดแล้ว / ข้ามไปก่อน
-    </button>
+    <div class="sheet-body" style="padding:0;display:flex;flex-direction:column;gap:0">
+
+      <!-- Upload section -->
+      <div style="padding:12px;background:#1e293b;border-bottom:1px solid #334155">
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:8px">📂 อัปโหลด Excel รายการส่งของ (รหัสร้าน + จำนวนสินค้า)</div>
+        <label style="display:flex;align-items:center;gap:10px;background:#0f172a;border:2px dashed #3b82f6;border-radius:10px;padding:12px 16px;cursor:pointer">
+          <span style="font-size:1.5rem">📊</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#c4b5fd">เลือกไฟล์ .xlsx / .xls</div>
+            <div id="driverFileName" style="font-size:11px;color:#64748b;margin-top:2px">ยังไม่ได้เลือกไฟล์</div>
+          </div>
+          <input type="file" id="driverFileInput" accept=".xlsx,.xls" style="display:none" onchange="handleDriverExcel(this)">
+        </label>
+        <!-- Excel format hint -->
+        <div style="margin-top:8px;padding:8px 10px;background:#0f172a;border-radius:8px;border-left:3px solid #7c3aed">
+          <div style="font-size:10px;color:#a78bfa;font-weight:700;margin-bottom:4px">📋 รูปแบบ Excel ที่รองรับ:</div>
+          <div style="font-size:10px;color:#64748b;font-family:monospace;line-height:1.8">
+            คอลัมน์ A = รหัสร้าน (เช่น TT001)<br>
+            คอลัมน์ B ขึ้นไป = ชื่อสินค้า / จำนวน
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI bar (hidden until data loaded) -->
+      <div id="driverKpiBar" style="display:none;border-bottom:1px solid #334155">
+        <div style="display:flex;gap:0">
+          <div style="flex:1;text-align:center;padding:10px 4px;border-right:1px solid #334155">
+            <div id="dKpiStores" style="font-size:1.4rem;font-weight:800;color:#c4b5fd">0</div>
+            <div style="font-size:10px;color:#94a3b8">ร้านที่ส่ง</div>
+          </div>
+          <div style="flex:1;text-align:center;padding:10px 4px;border-right:1px solid #334155">
+            <div id="dKpiDone" style="font-size:1.4rem;font-weight:800;color:#4ade80">0</div>
+            <div style="font-size:10px;color:#94a3b8">ส่งแล้ว ✓</div>
+          </div>
+          <div style="flex:1;text-align:center;padding:10px 4px;border-right:1px solid #334155">
+            <div id="dKpiSkus" style="font-size:1.4rem;font-weight:800;color:#fbbf24">0</div>
+            <div style="font-size:10px;color:#94a3b8">SKU รวม</div>
+          </div>
+          <div style="flex:1;text-align:center;padding:10px 4px">
+            <div id="dKpiDate" style="font-size:11px;font-weight:700;color:#94a3b8">-</div>
+            <div style="font-size:10px;color:#64748b">วันที่โหลด</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action buttons (hidden until data loaded) -->
+      <div id="driverActions" style="display:none;padding:8px 12px;background:#1e293b;border-bottom:1px solid #334155;display:none;gap:6px;flex-wrap:wrap">
+        <button onclick="copyDriverLine()" style="background:#065f46;color:#6ee7b7;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">📋 คัดลอกข้อความ LINE</button>
+        <button onclick="downloadDriverHTML()" style="background:#1e3a5f;color:#93c5fd;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">💾 ดาวน์โหลดให้คนขับ</button>
+        <button onclick="clearDriverData()" style="background:#450a0a;color:#fca5a5;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">🗑️ ล้างข้อมูล</button>
+      </div>
+
+      <!-- Delivery list -->
+      <div id="driverList" style="overflow-y:auto;flex:1;padding:8px 12px;display:flex;flex-direction:column;gap:6px">
+        <div style="text-align:center;padding:40px 20px;color:#475569">
+          <div style="font-size:2rem;margin-bottom:8px">🚚</div>
+          <div style="font-size:13px">อัปโหลด Excel เพื่อดูรายการส่งของ</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
+
+<script>
+// ── Welcome modal ──
+const _IP05_MAP_URL = 'https://www.google.com/maps/d/edit?mid=1NeB3YO91cClHi3j1Ou_zZN1AJJm4DYs&usp=sharing';
+function openMyMapsAndDismiss(){
+  window.open(_IP05_MAP_URL,'_blank');
+  localStorage.setItem('ip05_mapOpened_'+new Date().toISOString().slice(0,10),'1');
+  document.getElementById('welcomeModal').style.display='none';
+}
+function skipWelcome(){
+  localStorage.setItem('ip05_mapOpened_'+new Date().toISOString().slice(0,10),'1');
+  document.getElementById('welcomeModal').style.display='none';
+}
+(function(){
+  var today=new Date().toISOString().slice(0,10);
+  if(!localStorage.getItem('ip05_mapOpened_'+today))
+    document.getElementById('welcomeModal').style.display='flex';
+})();
+
+// ── Daily Summary ──────────────────────────────────────────────────────────
+function openDailySummary() {
+  const today = todayDay();
+  const todayStores = STORES.filter(s => s.day === today);
+  const visited = todayStores.filter(s => isVisited(s.code));
+  const total = todayStores.length;
+  const pct = total > 0 ? Math.round(visited.length / total * 100) : 0;
+  document.getElementById('dsVisited').textContent = visited.length;
+  document.getElementById('dsRemain').textContent = total - visited.length;
+  document.getElementById('dsTotal').textContent = total;
+  document.getElementById('dsPct').textContent = pct + '%';
+  // GPS checkin list
+  const gpsList = visited.map(s => {
+    const gKey = IP_ID.toLowerCase() + '_gps_' + s.code;
+    const gps = localStorage.getItem(gKey);
+    if (gps) {
+      try {
+        const g = JSON.parse(gps);
+        const t = new Date(g.ts).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+        return '📍 ' + s.name + ' — ' + t;
+      } catch(e) {}
+    }
+    return '✅ ' + s.name;
+  });
+  document.getElementById('dsCheckinList').innerHTML = gpsList.slice(0,10).join('<br>') +
+    (gpsList.length > 10 ? '<br>...และอีก ' + (gpsList.length-10) + ' ร้าน' : '');
+  document.getElementById('daySumModal').classList.add('open');
+}
+
+function shareDaySumLine() {
+  const today = todayDay();
+  const todayStores = STORES.filter(s => s.day === today);
+  const visited = todayStores.filter(s => isVisited(s.code));
+  const pct = todayStores.length > 0 ? Math.round(visited.length/todayStores.length*100) : 0;
+  const d = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'});
+  let txt = '📊 สรุปงานวันนี้ ' + IP_ID + '\n' + d + '\n';
+  txt += '✅ เยี่ยมแล้ว ' + visited.length + '/' + todayStores.length + ' ร้าน (' + pct + '%)\n';
+  if (visited.length < todayStores.length) {
+    txt += '⏳ ยังเหลือ ' + (todayStores.length - visited.length) + ' ร้าน';
+  } else {
+    txt += '🎉 ครบทุกร้านแล้ว!';
+  }
+  window.open('https://line.me/R/share?text=' + encodeURIComponent(txt), '_blank');
+}
+
+// ── Quick LINE share (topbar) ────────────────────────────────────────────
+function quickLineShare() { openDailySummary(); }
+
+// ── PWA Service Worker ───────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+</script>
+
+<!-- Daily Summary Modal -->
+<div class="day-sum-overlay" id="daySumModal">
+  <div class="day-sum-box">
+    <div class="day-sum-title">📊 สรุปงานวันนี้</div>
+    <div class="day-sum-grid">
+      <div class="day-sum-card"><div class="val" id="dsVisited" style="color:#4ade80">0</div><div class="lbl">เยี่ยมแล้ว</div></div>
+      <div class="day-sum-card"><div class="val" id="dsRemain" style="color:#fbbf24">0</div><div class="lbl">ยังเหลือ</div></div>
+      <div class="day-sum-card"><div class="val" id="dsTotal" style="color:#818cf8">0</div><div class="lbl">ทั้งหมดวันนี้</div></div>
+      <div class="day-sum-card"><div class="val" id="dsPct" style="color:#38bdf8">0%</div><div class="lbl">% สำเร็จ</div></div>
+    </div>
+    <div id="dsCheckinList" style="font-size:11px;color:#94a3b8;margin-bottom:14px;max-height:100px;overflow-y:auto;line-height:1.8"></div>
+    <div class="day-sum-actions">
+      <button class="dsm-line" onclick="shareDaySumLine()">📤 แชร์ LINE</button>
+      <button class="dsm-close" onclick="document.getElementById('daySumModal').classList.remove('open')">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<div id="welcomeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+    <div style="font-size:2.4rem;margin-bottom:8px;">🗺️</div>
+    <div style="font-size:1.1rem;font-weight:800;color:#1a3c5e;margin-bottom:6px;">เปิดแผนที่สาย IP05 ก่อนนะ</div>
+    <div style="font-size:0.85rem;color:#555;line-height:1.6;margin-bottom:16px;">กรุณากด <strong>&quot;เปิด My Maps สาย IP05&quot;</strong><br>เพื่อให้แผนที่แสดงผลถูกต้อง</div>
+    <button onclick="openMyMapsAndDismiss()" style="width:100%;padding:14px;background:#6a1b9a;color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:800;cursor:pointer;margin-bottom:10px;">🗺️ เปิด My Maps สาย IP05</button>
+    <button onclick="skipWelcome()" style="width:100%;padding:10px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-size:0.85rem;cursor:pointer;font-weight:600;">ข้ามไปก่อน</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     VTC CLOUD MODULE v1.0 — Supabase + offline sync + photo
+     ═══════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+'use strict';
+
+/* ── Config (set once in setup.html, shared via localStorage) ── */
+function sbUrl(){ return localStorage.getItem('vtc_sb_url')||''; }
+function sbKey(){ return localStorage.getItem('vtc_sb_key')||''; }
+function isConfigured(){ return !!(sbUrl()&&sbKey()); }
+
+/* ── Rep name ─────────────────────────────────────────────── */
+function getRepName(){ return localStorage.getItem(IP_ID+'_rep_name')||''; }
+
+function promptRepName(){
+  return new Promise(function(resolve){
+    if(getRepName()){ resolve(getRepName()); return; }
+    var ov=document.createElement('div');
+    ov.id='vtcRepOv';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+    ov.innerHTML='<div style="background:#fff;border-radius:14px;padding:28px 20px;width:300px;max-width:100%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)">'
+      +'<div style="font-size:40px;margin-bottom:8px">👤</div>'
+      +'<div style="font-weight:700;font-size:17px;margin-bottom:4px;color:#111">กรอกชื่อพนักงาน</div>'
+      +'<div style="color:#666;font-size:13px;margin-bottom:16px">ใช้สำหรับบันทึกการเช็คอินในระบบ<br>กรอกครั้งเดียว จำไว้ตลอด</div>'
+      +'<input id="vtcNmIn" type="text" placeholder="ชื่อ-สกุล เช่น สมชาย ใจดี"'
+        +' style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:9px;font-size:15px;text-align:center;margin-bottom:12px;font-family:inherit;outline:none">'
+      +'<button id="vtcNmOk" style="width:100%;padding:13px;background:#4CAF50;color:#fff;border:none;border-radius:9px;font-size:16px;font-weight:700;cursor:pointer">บันทึก ✔</button>'
+      +'</div>';
+    document.body.appendChild(ov);
+    var inp=ov.querySelector('#vtcNmIn');
+    var btn=ov.querySelector('#vtcNmOk');
+    setTimeout(function(){inp.focus();},100);
+    btn.onclick=function(){
+      var v=(inp.value||'').trim();
+      if(!v){inp.style.borderColor='#f44336';return;}
+      localStorage.setItem(IP_ID+'_rep_name',v);
+      ov.remove();
+      resolve(v);
+    };
+    inp.addEventListener('keydown',function(e){if(e.key==='Enter')btn.click();});
+  });
+}
+
+/* ── Photo capture ────────────────────────────────────────── */
+function capturePhoto(){
+  return new Promise(function(resolve){
+    var ov=document.createElement('div');
+    ov.style.cssText='position:fixed;inset:0;background:#000;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px';
+    ov.innerHTML='<div style="color:#fff;font-size:15px;font-weight:600">📷 ถ่ายรูปหน้าร้าน</div>'
+      +'<video id="vtcVid" autoplay playsinline muted style="max-width:100%;max-height:55vh;border-radius:10px;object-fit:cover"></video>'
+      +'<canvas id="vtcCnv" style="display:none"></canvas>'
+      +'<div style="display:flex;gap:10px">'
+        +'<button id="vtcSnap" style="padding:14px 28px;background:#4CAF50;color:#fff;border:none;border-radius:9px;font-size:16px;font-weight:700;cursor:pointer">📸 ถ่าย</button>'
+        +'<button id="vtcSkip" style="padding:14px 22px;background:#555;color:#fff;border:none;border-radius:9px;font-size:14px;cursor:pointer">ข้าม</button>'
+      +'</div>';
+    document.body.appendChild(ov);
+    var stream=null;
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}})
+      .then(function(s){
+        stream=s;
+        ov.querySelector('#vtcVid').srcObject=s;
+      })
+      .catch(function(){ov.remove();resolve(null);});
+
+    ov.querySelector('#vtcSnap').onclick=function(){
+      var vid=ov.querySelector('#vtcVid');
+      var cnv=ov.querySelector('#vtcCnv');
+      var mw=640,mh=480,w=vid.videoWidth||640,h=vid.videoHeight||480;
+      if(w>mw){h=Math.round(h*mw/w);w=mw;}
+      if(h>mh){w=Math.round(w*mh/h);h=mh;}
+      cnv.width=w; cnv.height=h;
+      cnv.getContext('2d').drawImage(vid,0,0,w,h);
+      var dataUrl=cnv.toDataURL('image/jpeg',0.72);
+      if(stream) stream.getTracks().forEach(function(t){t.stop();});
+      ov.remove();
+      resolve(dataUrl);
+    };
+    ov.querySelector('#vtcSkip').onclick=function(){
+      if(stream) stream.getTracks().forEach(function(t){t.stop();});
+      ov.remove();
+      resolve(null);
+    };
+  });
+}
+
+/* ── Upload photo to Supabase Storage ─────────────────────── */
+async function uploadPhoto(dataUrl, storecode){
+  if(!dataUrl||!isConfigured()) return null;
+  try{
+    var arr=dataUrl.split(','), mime=arr[0].match(/:(.*?);/)[1];
+    var bstr=atob(arr[1]), n=bstr.length, u8=new Uint8Array(n);
+    while(n--) u8[n]=bstr.charCodeAt(n);
+    var blob=new Blob([u8],{type:mime});
+    var path=IP_ID+'/'+new Date().toISOString().slice(0,10)+'/'+storecode+'_'+Date.now()+'.jpg';
+    var res=await fetch(sbUrl()+'/storage/v1/object/checkin-photos/'+path,{
+      method:'POST',
+      headers:{'apikey':sbKey(),'Authorization':'Bearer '+sbKey(),'Content-Type':'image/jpeg'},
+      body:blob
+    });
+    if(!res.ok) return null;
+    return sbUrl()+'/storage/v1/object/public/checkin-photos/'+path;
+  }catch(e){return null;}
+}
+
+/* ── Supabase POST ────────────────────────────────────────── */
+async function postCheckin(record){
+  if(!isConfigured()) return false;
+  try{
+    var res=await fetch(sbUrl()+'/rest/v1/checkins',{
+      method:'POST',
+      headers:{
+        'apikey':sbKey(),
+        'Authorization':'Bearer '+sbKey(),
+        'Content-Type':'application/json',
+        'Prefer':'return=minimal'
+      },
+      body:JSON.stringify(record)
+    });
+    return res.ok;
+  }catch(e){return false;}
+}
+
+/* ── Offline queue ────────────────────────────────────────── */
+var QKEY=IP_ID+'_sync_q';
+function enqueue(rec){
+  var q=JSON.parse(localStorage.getItem(QKEY)||'[]');
+  q.push(rec); localStorage.setItem(QKEY,JSON.stringify(q));
+}
+async function flushQueue(){
+  if(!isConfigured()) return;
+  var q=JSON.parse(localStorage.getItem(QKEY)||'[]');
+  if(!q.length) return;
+  var left=[];
+  for(var i=0;i<q.length;i++){
+    var ok=await postCheckin(q[i]);
+    if(!ok) left.push(q[i]);
+  }
+  localStorage.setItem(QKEY,JSON.stringify(left));
+  var synced=q.length-left.length;
+  if(synced>0 && typeof toast==='function') toast('☁️ ซิงก์ '+synced+' รายการแล้ว');
+}
+
+/* ── Daily target progress ────────────────────────────────── */
+async function fetchTarget(){
+  if(!isConfigured()) return;
+  try{
+    var res=await fetch(sbUrl()+'/rest/v1/daily_targets?ip_route=eq.'+IP_ID+'&select=target_stores',
+      {headers:{'apikey':sbKey(),'Authorization':'Bearer '+sbKey()}});
+    if(!res.ok) return;
+    var d=await res.json();
+    if(d[0]&&d[0].target_stores) localStorage.setItem(IP_ID+'_target',d[0].target_stores);
+  }catch(e){}
+}
+
+/* ── Progress bar override (เพิ่ม target badge) ──────────── */
+function injectTargetBadge(){
+  var target=parseInt(localStorage.getItem(IP_ID+'_target')||'0');
+  if(!target) return;
+  if(document.getElementById('vtcTargetBadge')) return;
+  var bar=document.getElementById('progressBar');
+  if(!bar) return;
+  var wrap=bar.parentElement;
+  if(!wrap) return;
+  var badge=document.createElement('div');
+  badge.id='vtcTargetBadge';
+  badge.style.cssText='font-size:11px;color:#888;margin-top:2px;text-align:center;font-family:inherit';
+  badge.textContent='🎯 เป้าวันนี้: '+target+' ร้าน';
+  wrap.appendChild(badge);
+}
+
+/* ── Main checkin hook ────────────────────────────────────── */
+var _origCheckIn=null;
+function hookCheckIn(){
+  if(typeof checkIn!=='function') return;
+  _origCheckIn=checkIn;
+  window.checkIn=async function(code){
+    var wasDone=(typeof isVisited==='function')&&isVisited(code);
+    _origCheckIn(code);
+    var isDone=(typeof isVisited==='function')&&isVisited(code);
+    if(!wasDone&&isDone){
+      await onSuccess(code);
+    }
+  };
+}
+
+async function onSuccess(code){
+  var s=(typeof STORES!=='undefined')&&STORES.find(function(x){return x.code===code;});
+  /* 1. ชื่อพนักงาน */
+  var rep=await promptRepName();
+  /* 2. รูปภาพ */
+  var dataUrl=await capturePhoto();
+  /* 3. Upload */
+  var photoUrl=await uploadPhoto(dataUrl, code);
+  /* 4. สร้าง record */
+  var lat=(typeof userLat!=='undefined')?userLat:null;
+  var lng=(typeof userLng!=='undefined')?userLng:null;
+  var record={
+    ip_route:IP_ID,
+    store_code:code,
+    store_name:s?s.name:code,
+    store_area:s?s.area:'',
+    store_cat:s?s.cat:'',
+    rep_name:rep,
+    gps_lat:lat,
+    gps_lng:lng,
+    photo_url:photoUrl||null,
+    visited_date:new Date().toISOString().slice(0,10),
+    visited_at:new Date().toISOString(),
+    synced_offline:false
+  };
+  /* 5. POST หรือ queue */
+  var ok=await postCheckin(record);
+  if(!ok){
+    record.synced_offline=true;
+    enqueue(record);
+    if(typeof toast==='function') toast('📶 บันทึกออฟไลน์ — จะซิงก์เมื่อมีเน็ต');
+  } else {
+    if(typeof toast==='function') toast('☁️ บันทึกในระบบแล้ว');
+  }
+}
+
+/* ── Boot ─────────────────────────────────────────────────── */
+function boot(){
+  /* ถามชื่อถ้ายังไม่มี */
+  if(!getRepName()) setTimeout(function(){promptRepName();},1000);
+  /* sync queue ถ้ามี */
+  setTimeout(function(){flushQueue();},2500);
+  /* hook checkIn */
+  hookCheckIn();
+  /* load target */
+  fetchTarget().then(function(){setTimeout(injectTargetBadge,1500);});
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',boot);
+}else{
+  setTimeout(boot,500);
+}
+
+/* ── expose for dashboard ─────────────────────────────────── */
+window._vtc={postCheckin:postCheckin,sbUrl:sbUrl,sbKey:sbKey};
+})();
+</script>
 </body>
 </html>
